@@ -1,0 +1,133 @@
+// This is your Prisma schema file.
+// Run "npx prisma db push" to sync with MySQL.
+// Run "node prisma/seed.js" to seed the admin user.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // bcrypt hash — never store plaintext
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+model Stat {
+  id        Int      @id @default(autoincrement())
+  label     String
+  value     String
+  suffix    String   @default("+")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("stats")
+}
+
+model Testimonial {
+  id         Int      @id @default(autoincrement())
+  name       String
+  initials   String
+  timeAgo    String   @map("time_ago")
+  rating     Int      @default(5)
+  text       String   @db.Text
+  colorClass String   @default("badge-blue") @map("color_class")
+  isActive   Boolean  @default(true) @map("is_active")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("testimonials")
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  imgUrl      String   @map("img_url")
+  link        String   @default("")
+  description String   @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("projects")
+}
+
+model Quote {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String
+  phone        String
+  service      String   @default("")
+  message      String   @db.Text
+  companyName  String   @default("") @map("company_name")
+  turnover     String   @default("")
+  businessDesc String   @db.Text @default("") @map("business_desc")
+  status       String   @default("new") // new | in-progress | done
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("quotes")
+}
+
+model Consultation {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  company   String   @default("")
+  message   String   @db.Text
+  status    String   @default("new") // new | in-progress | done
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("consultations")
+}
+
+model ServiceCategory {
+  id        String          @id // e.g. "ecommerce"
+  title     String
+  desc      String          @db.Text
+  iconName  String          @map("icon_name") // e.g. "FiShoppingCart"
+  sortOrder Int             @default(0) @map("sort_order")
+  isActive  Boolean         @default(true) @map("is_active")
+  filings   ServiceFiling[]
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  @@map("service_categories")
+}
+
+model ServiceFiling {
+  id         Int             @id @default(autoincrement())
+  categoryId String          @map("category_id")
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int             @default(0) @map("sort_order")
+  isActive   Boolean         @default(true) @map("is_active")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  @@map("service_filings")
+}
+
+model TurnoverOption {
+  id        Int      @id @default(autoincrement())
+  label     String
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("turnover_options")
+}
