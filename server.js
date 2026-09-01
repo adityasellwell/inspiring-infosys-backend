@@ -13,7 +13,7 @@ import quotesRouter from './src/routes/quotes.js';
 import consultationsRouter from './src/routes/consultations.js';
 import categoriesRouter from './src/routes/categories.js';
 import turnoverOptionsRouter from './src/routes/turnoverOptions.js';
-
+import employeesRouter from './src/routes/employees.js';
 dotenv.config();
 
 const app = express();
@@ -35,7 +35,7 @@ app.use('/api/quotes', quotesRouter);
 app.use('/api/consultations', consultationsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/turnover-options', turnoverOptionsRouter);
-
+app.use('/api/employees', employeesRouter)
 // ── Health Check ───────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'Inspiring Infosys API is running' });
