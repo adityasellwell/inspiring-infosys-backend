@@ -132,10 +132,16 @@ model TurnoverOption {
   @@map("turnover_options")
 }
 model Employee {
-  id       Int      @id @default(autoincrement())
-  name     String
-  email    String
-  joinDate DateTime @map("join_date") @db.Date
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  phone       String   @default("")
+  department  String   @default("")
+  designation String   @default("")
+  joinDate    DateTime @map("join_date") @db.Date
+  salary      Decimal  @db.Decimal(10, 2) @default(0)
+  status      String   @default("Active")
+  address     String   @db.Text @default("")
 
   @@map("employees")
 }

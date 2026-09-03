@@ -14,15 +14,42 @@ import consultationsRouter from './src/routes/consultations.js';
 import categoriesRouter from './src/routes/categories.js';
 import turnoverOptionsRouter from './src/routes/turnoverOptions.js';
 import employeesRouter from './src/routes/employees.js';
+// Load environment config (.env.production if NODE_ENV=production, otherwise .env)
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: envFile });
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ─────────────────────────────────────────────────────
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  : [
+      'https://inspiringinfosys.com',
+      'https://www.inspiringinfosys.com',
+      'http://inspiringinfosys.com',
+      'http://www.inspiringinfosys.com',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow server-to-server, mobile app, CLI or missing origin requests
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Allow any subdomain of inspiringinfosys.com
+    if (/^https?:\/\/(.+\.)?inspiringinfosys\.com$/i.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
 app.use(express.json());
 
