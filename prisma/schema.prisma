@@ -133,6 +133,7 @@ model TurnoverOption {
 }
 model Employee {
   id          Int      @id @default(autoincrement())
+  empId       String   @default("") @map("emp_id")
   name        String
   email       String
   phone       String   @default("")

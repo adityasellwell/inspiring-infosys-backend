@@ -22,11 +22,12 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
     try {
-        const { name, email, phone, department, designation, joinDate, salary, status, address } = req.body;
-        if (!name || !email || !phone || !department || !designation || !joinDate || salary === undefined || salary === '' || !status) {
+        const { empId, name, empName, email, phone, department, designation, joinDate, salary, status, address } = req.body;
+        const actualName = name || empName;
+        if (!actualName || !email || !phone || !department || !designation || !joinDate || salary === undefined || salary === '' || !status) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, email, phone, department, designation, join date, salary, and status are required',
+                message: 'Emp Name, email, phone, department, designation, join date, salary, and status are required',
             });
         }
         const numericSalary = parseFloat(salary);
@@ -38,7 +39,8 @@ router.post('/', requireAuth, async (req, res) => {
         }
         const employee = await prisma.employee.create({
             data: {
-                name,
+                empId: empId || '',
+                name: actualName,
                 email,
                 phone,
                 department,
@@ -62,15 +64,15 @@ router.post('/', requireAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const empId = parseInt(id, 10);
-        if (isNaN(empId)) {
+        const empIdParam = parseInt(id, 10);
+        if (isNaN(empIdParam)) {
             return res.status(400).json({ success: false, message: 'Invalid employee ID' });
         }
-        const existing = await prisma.employee.findUnique({ where: { id: empId } });
+        const existing = await prisma.employee.findUnique({ where: { id: empIdParam } });
         if (!existing) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
-        const { name, email, phone, department, designation, joinDate, salary, status, address } = req.body;
+        const { empId, name, empName, email, phone, department, designation, joinDate, salary, status, address } = req.body;
         
         let numericSalary;
         if (salary !== undefined && salary !== '') {
@@ -80,10 +82,13 @@ router.put('/:id', requireAuth, async (req, res) => {
             }
         }
 
+        const actualName = name || empName;
+
         const employee = await prisma.employee.update({
-            where: { id: empId },
+            where: { id: empIdParam },
             data: {
-                name: name || undefined,
+                empId: empId !== undefined ? empId : undefined,
+                name: actualName || undefined,
                 email: email || undefined,
                 phone: phone || undefined,
                 department: department || undefined,
