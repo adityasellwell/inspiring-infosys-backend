@@ -18,6 +18,7 @@ import employeeAuthRouter from './src/routes/employeeAuth.js';
 import clientServicesRouter from './src/routes/clientServices.js';
 import prisma from './src/lib/prisma.js';
 import { normalizeEmpId } from './src/controllers/employeeController.js';
+import { ensureDatabaseSynced } from './src/lib/dbInit.js';
 
 // Load environment config (.env.production if NODE_ENV=production, otherwise .env)
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
@@ -92,6 +93,7 @@ app.listen(PORT, async () => {
   console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login\n`);
 
   try {
+    await ensureDatabaseSynced();
     const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true } });
     for (const emp of allEmployees) {
       const cleanId = normalizeEmpId(emp.empId, emp.id);
