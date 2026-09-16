@@ -20,9 +20,9 @@ import prisma from './src/lib/prisma.js';
 import { normalizeEmpId } from './src/controllers/employeeController.js';
 import { ensureDatabaseSynced } from './src/lib/dbInit.js';
 
-// Load environment config (.env.production if NODE_ENV=production, otherwise .env)
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
-dotenv.config({ path: envFile });
+// Load environment config (.env.production if present/production, otherwise fallback to .env)
+dotenv.config({ path: '.env.production' });
+dotenv.config({ path: '.env' });
 dotenv.config();
 
 const app = express();
