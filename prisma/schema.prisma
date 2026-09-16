@@ -132,17 +132,240 @@ model TurnoverOption {
   @@map("turnover_options")
 }
 model Employee {
-  id          Int      @id @default(autoincrement())
-  empId       String   @default("") @map("emp_id")
-  name        String
-  email       String
-  phone       String   @default("")
-  department  String   @default("")
-  designation String   @default("")
-  joinDate    DateTime @map("join_date") @db.Date
-  salary      Decimal  @db.Decimal(10, 2) @default(0)
-  status      String   @default("Active")
-  address     String   @db.Text @default("")
+  id                  Int      @id @default(autoincrement())
+  empId               String   @default("") @map("emp_id")
+  name                String
+  firstName           String   @default("") @map("first_name")
+  middleName          String   @default("") @map("middle_name")
+  lastName            String   @default("") @map("last_name")
+  email               String
+  personalEmail       String   @default("") @map("personal_email")
+  password            String   @default("") // bcrypt hashed password for employee dashboard login
+  phone               String   @default("")
+  altPhone            String   @default("") @map("alt_phone")
+  dob                 DateTime? @db.Date
+  gender              String   @default("Male")
+  
+  // Address
+  address             String   @db.Text @default("")
+  currentAddress      String   @db.Text @default("") @map("current_address")
+  permanentAddress    String   @db.Text @default("") @map("permanent_address")
+  city                String   @default("Mumbai")
+  state               String   @default("Maharashtra")
+  country             String   @default("India")
+  pincode             String   @default("")
+
+  // Emergency Contact
+  emergencyContactName String  @default("") @map("emergency_contact_name")
+  emergencyRelationship String @default("") @map("emergency_relationship")
+  emergencyPhone       String  @default("") @map("emergency_phone")
+  emergencyAltPhone    String  @default("") @map("emergency_alt_phone")
+
+  // Employment Info
+  department          String   @default("")
+  designation         String   @default("")
+  reportingManager    String   @default("HR Manager") @map("reporting_manager")
+  joinDate            DateTime @map("join_date") @db.Date
+  confirmationDate    DateTime? @map("confirmation_date") @db.Date
+  employmentType      String   @default("Full-Time") @map("employment_type") // Full-Time | Part-Time | Contract | Intern
+  workLocation        String   @default("Mumbai Office") @map("work_location")
+  workMode            String   @default("On-site") @map("work_mode") // On-site | Remote | Hybrid
+  shift               String   @default("General (9:30 AM - 6:30 PM)")
+  probationPeriod     String   @default("3 Months") @map("probation_period")
+  status              String   @default("Active") // Active | On Leave | Probation | Resigned | Terminated | Inactive
+
+  // Payroll Info
+  salary              Decimal  @db.Decimal(10, 2) @default(0)
+  salaryStructure     String   @default("Standard Corporate") @map("salary_structure")
+  basicSalary         Decimal  @default(0) @db.Decimal(10, 2) @map("basic_salary")
+  hra                 Decimal  @default(0) @db.Decimal(10, 2)
+  allowances          Decimal  @default(0) @db.Decimal(10, 2)
+  deductions          Decimal  @default(0) @db.Decimal(10, 2)
+  bankName            String   @default("") @map("bank_name")
+  accountNumber       String   @default("") @map("account_number")
+  ifsc                String   @default("")
+  panNumber           String   @default("") @map("pan_number")
+  uanNumber           String   @default("") @map("uan_number")
+  taxInfo             String   @default("New Tax Regime") @map("tax_info")
+
+  // Documents
+  photoUrl            String   @default("") @map("photo_url") @db.LongText
+  aadharUrl           String   @default("") @map("aadhar_url") @db.LongText
+  panUrl              String   @default("") @map("pan_url") @db.LongText
+  docVerified         Boolean  @default(false) @map("doc_verified")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  attendances          Attendance[]
+  salarySlips          SalarySlip[]
+  leaveRequests        LeaveRequest[]
+  queries              EmployeeQuery[]
+  dailyWorkReports      DailyWorkReport[]
+  documents            EmployeeDocument[]
+  hrLetters            HRLetter[]
+  employeeRequests     EmployeeRequest[]
 
   @@map("employees")
+}
+
+model Attendance {
+  id         Int       @id @default(autoincrement())
+  employeeId Int       @map("employee_id")
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime  @db.Date
+  checkIn    DateTime? @map("check_in")
+  checkOut   DateTime? @map("check_out")
+  status     String    @default("Present") // Present | Late | Absent | Half-Day | On Leave | Work From Home
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("attendances")
+}
+
+model SalarySlip {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month      String
+  year       Int
+  basicPay   Decimal  @map("basic_pay") @db.Decimal(10, 2)
+  hra        Decimal  @default(0) @db.Decimal(10, 2)
+  allowances Decimal  @default(0) @db.Decimal(10, 2)
+  deductions Decimal  @default(0) @db.Decimal(10, 2)
+  netSalary  Decimal  @map("net_salary") @db.Decimal(10, 2)
+  issuedAt   DateTime @default(now()) @map("issued_at")
+
+  @@map("salary_slips")
+}
+
+model LeaveRequest {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType  String   @map("leave_type") // Sick | Casual | Paid | Unpaid
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
+  reason     String   @db.Text
+  status     String   @default("Pending") // Pending | Approved | Rejected
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("leave_requests")
+}
+
+model EmployeeQuery {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  subject    String
+  message    String   @db.Text
+  reply      String?  @db.Text
+  status     String   @default("Pending") // Pending | Replied
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("employee_queries")
+}
+
+model Notice {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  priority  String   @default("Medium") // Low | Medium | High
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notices")
+}
+
+model DailyWorkReport {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int      @map("employee_id")
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  summary     String   @db.Text
+  hoursWorked Float    @default(8.0) @map("hours_worked")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("daily_work_reports")
+}
+
+model EmployeeDocument {
+  id           Int      @id @default(autoincrement())
+  employeeId   Int      @map("employee_id")
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  documentName String   @map("document_name")
+  category     String   // Offer Letter | Appointment Letter | Joining Letter | Confirmation Letter | Promotion Letter | Salary Revision Letter | Experience Letter | Relieving Letter | Payslip | Tax Documents | Identity Documents | Educational Documents | Other Documents
+  fileUrl      String   @map("file_url") @db.LongText
+  uploadedBy   String   @default("Admin") @map("uploaded_by")
+  status       String   @default("Verified")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("employee_documents")
+}
+
+model HRLetter {
+  id             Int      @id @default(autoincrement())
+  employeeId     Int      @map("employee_id")
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  letterType     String   @map("letter_type") // Offer Letter | Appointment Letter | Confirmation Letter | Promotion Letter | Increment Letter | Transfer Letter | Experience Letter | Relieving Letter
+  title          String
+  content        String   @db.Text
+  pdfUrl         String?  @map("pdf_url") @db.LongText
+  sentToEmployee Boolean  @default(true) @map("sent_to_employee")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("hr_letters")
+}
+
+model EmployeeRequest {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int      @map("employee_id")
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  requestType String   @map("request_type") // Leave | Attendance Correction | WFH | Expense Claim | Document Request | Profile Change | HR Helpdesk
+  title       String
+  description String   @db.Text
+  status      String   @default("Pending") // Pending | Approved | Rejected | In Review | Completed
+  oldValue    String?  @map("old_value") @db.Text
+  newValue    String?  @map("new_value") @db.Text
+  assignedTo  String   @default("HR Admin") @map("assigned_to")
+  reviewedBy  String?  @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("employee_requests")
+}
+
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  changedBy     String   @map("changed_by")
+  action        String
+  entity        String
+  entityId      String   @map("entity_id")
+  field         String   @default("")
+  previousValue String?  @map("previous_value") @db.Text
+  newValue      String?  @map("new_value") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model ClientService {
+  id              Int       @id @default(autoincrement())
+  clientName      String    @map("client_name")
+  companyName     String    @default("") @map("company_name")
+  clientEmail     String    @map("client_email")
+  clientPhone     String    @default("") @map("client_phone")
+  serviceType     String    @default("Domain Name") @map("service_type")
+  serviceName     String    @map("service_name")
+  provider        String    @default("GoDaddy")
+  purchaseDate    DateTime? @map("purchase_date") @db.Date
+  expiryDate      DateTime  @map("expiry_date") @db.Date
+  renewalAmount   Decimal   @default(0) @db.Decimal(10, 2) @map("renewal_amount")
+  autoRenew       Boolean   @default(false) @map("auto_renew")
+  status          String    @default("Active")
+  lastAlertSentAt DateTime? @map("last_alert_sent_at")
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("client_services")
 }

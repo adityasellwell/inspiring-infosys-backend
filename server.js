@@ -14,6 +14,11 @@ import consultationsRouter from './src/routes/consultations.js';
 import categoriesRouter from './src/routes/categories.js';
 import turnoverOptionsRouter from './src/routes/turnoverOptions.js';
 import employeesRouter from './src/routes/employees.js';
+import employeeAuthRouter from './src/routes/employeeAuth.js';
+import clientServicesRouter from './src/routes/clientServices.js';
+import prisma from './src/lib/prisma.js';
+import { normalizeEmpId } from './src/controllers/employeeController.js';
+
 // Load environment config (.env.production if NODE_ENV=production, otherwise .env)
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
 dotenv.config({ path: envFile });
@@ -26,13 +31,13 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
   : [
-      'https://inspiringinfosys.com',
-      'https://www.inspiringinfosys.com',
-      'http://inspiringinfosys.com',
-      'http://www.inspiringinfosys.com',
-      'http://localhost:5173',
-      'http://localhost:3000'
-    ];
+    'https://inspiringinfosys.com',
+    'https://www.inspiringinfosys.com',
+    'http://inspiringinfosys.com',
+    'http://www.inspiringinfosys.com',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -51,7 +56,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ── Routes ─────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
@@ -62,8 +68,14 @@ app.use('/api/quotes', quotesRouter);
 app.use('/api/consultations', consultationsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/turnover-options', turnoverOptionsRouter);
-app.use('/api/employees', employeesRouter)
-// ── Health Check ───────────────────────────────────────────────────
+app.use('/api/employees', employeesRouter);
+app.use('/api/employee-portal', employeeAuthRouter);
+app.use('/api/client-services', clientServicesRouter);
+// ── Health Check & Root Route ──────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({ success: true, message: 'Inspiring Infosys API Server is running smoothly', health: '/api/health' });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'Inspiring Infosys API is running' });
 });
@@ -74,8 +86,24 @@ app.use((_req, res) => {
 });
 
 // ── Start Server ───────────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
   console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login\n`);
+
+  try {
+    const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true } });
+    for (const emp of allEmployees) {
+      const cleanId = normalizeEmpId(emp.empId, emp.id);
+      if (emp.empId !== cleanId) {
+        await prisma.employee.update({
+          where: { id: emp.id },
+          data: { empId: cleanId }
+        });
+        console.log(`[DB Auto-Migrate] Migrated Employee #${emp.id} from '${emp.empId}' to '${cleanId}'`);
+      }
+    }
+  } catch (err) {
+    console.warn('[DB Auto-Migrate Notice]', err.message);
+  }
 });

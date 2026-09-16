@@ -248,19 +248,138 @@ async function main() {
     console.log('⏭️  Service Categories & Filings already exist — skipped');
   }
 
-  // ── 6. Turnover Options (Get Quote Step 3) ──────────────────────
-  const turnoverCount = await prisma.turnoverOption.count();
-  if (turnoverCount === 0) {
-    await prisma.turnoverOption.createMany({
-      data: [
-        { label: 'Below ₹10 Lakhs', sortOrder: 1, isActive: true },
-        { label: '₹10L to ₹40 Lakhs', sortOrder: 2, isActive: true },
-        { label: 'Above ₹40 Lakhs', sortOrder: 3, isActive: true },
-      ],
+  // ── 7. Initial Employee Records ────────────────────────────────
+  const employeesCount = await prisma.employee.count();
+  if (employeesCount === 0) {
+    const empPasswordHash = await bcrypt.hash('Inspire#2026', 10);
+
+    const emp1 = await prisma.employee.create({
+      data: {
+        empId: 'INS001',
+        name: 'Rahul Sharma',
+        email: 'rahul.sharma@inspiringinfosys.com',
+        password: empPasswordHash,
+        phone: '9876543210',
+        department: 'IT',
+        designation: 'Senior Software Engineer',
+        joinDate: new Date('2024-01-15'),
+        salary: 65000.00,
+        status: 'Active',
+        address: 'Mumbai, Maharashtra'
+      }
     });
-    console.log('✅ Turnover options seeded (3 records)');
+
+    const emp2 = await prisma.employee.create({
+      data: {
+        empId: 'INS002',
+        name: 'Ananya Patel',
+        email: 'ananya.patel@inspiringinfosys.com',
+        password: empPasswordHash,
+        phone: '9812345678',
+        department: 'E-Commerce',
+        designation: 'Marketplace Specialist',
+        joinDate: new Date('2024-06-01'),
+        salary: 48000.00,
+        status: 'Active',
+        address: 'Navi Mumbai, Maharashtra'
+      }
+    });
+
+    const emp3 = await prisma.employee.create({
+      data: {
+        empId: 'INS003',
+        name: 'Atul Mishra',
+        email: 'info4alam@gmail.com',
+        password: empPasswordHash,
+        phone: '8444040514',
+        department: 'IT',
+        designation: 'FULL STACK',
+        joinDate: new Date('2026-09-01'),
+        salary: 75000.00,
+        status: 'Active',
+        address: 'Mumbai, India'
+      }
+    });
+
+    // Initial Attendance Punch Logs
+    const today = new Date();
+    await prisma.attendance.createMany({
+      data: [
+        {
+          employeeId: emp1.id,
+          date: today,
+          checkIn: new Date(today.getTime() - 6 * 3600 * 1000),
+          checkOut: new Date(today.getTime() - 1 * 3600 * 1000),
+          status: 'Present'
+        },
+        {
+          employeeId: emp2.id,
+          date: today,
+          checkIn: new Date(today.getTime() - 5 * 3600 * 1000),
+          checkOut: null,
+          status: 'Clocked In'
+        },
+        {
+          employeeId: emp3.id,
+          date: today,
+          checkIn: new Date(today.getTime() - 4 * 3600 * 1000),
+          checkOut: null,
+          status: 'Clocked In'
+        }
+      ]
+    });
+
+    // Sample Leave Request
+    await prisma.leaveRequest.create({
+      data: {
+        employeeId: emp2.id,
+        leaveType: 'Casual',
+        startDate: new Date('2026-09-10'),
+        endDate: new Date('2026-09-12'),
+        reason: 'Family function in hometown.',
+        status: 'Pending'
+      }
+    });
+
+    // Sample Employee Query
+    await prisma.employeeQuery.create({
+      data: {
+        employeeId: emp1.id,
+        subject: 'Salary Slip Update',
+        message: 'Could you please issue the salary slip for September?',
+        status: 'Pending'
+      }
+    });
+
+    // Sample Documents
+    await prisma.employeeDocument.createMany({
+      data: [
+        { employeeId: emp1.id, documentName: 'Rahul_Offer_Letter.pdf', category: 'Offer Letter', fileUrl: '/docs/offer_INS001.pdf', uploadedBy: 'HR Admin', status: 'Verified' },
+        { employeeId: emp1.id, documentName: 'Rahul_Aadhar_Card.png', category: 'Identity Documents', fileUrl: '/docs/aadhar_INS001.png', uploadedBy: 'Rahul Sharma', status: 'Verified' },
+        { employeeId: emp2.id, documentName: 'Ananya_Experience_Letter.pdf', category: 'Experience Letter', fileUrl: '/docs/exp_emp2.pdf', uploadedBy: 'HR Admin', status: 'Verified' },
+        { employeeId: emp3.id, documentName: 'Atul_Joining_Letter.pdf', category: 'Joining Letter', fileUrl: '/docs/join_emp3.pdf', uploadedBy: 'HR Admin', status: 'Verified' }
+      ]
+    });
+
+    // Sample HR Letters
+    await prisma.hRLetter.createMany({
+      data: [
+        { employeeId: emp1.id, letterType: 'Offer Letter', title: 'Offer of Employment — Senior Software Engineer', content: 'Dear Rahul Sharma, We are pleased to offer you...', sentToEmployee: true },
+        { employeeId: emp3.id, letterType: 'Appointment Letter', title: 'Appointment Letter — FULL STACK Engineer', content: 'Dear Atul Mishra, Welcome to Inspiring Infosys...', sentToEmployee: true }
+      ]
+    });
+
+    // Sample Employee Requests
+    await prisma.employeeRequest.createMany({
+      data: [
+        { employeeId: emp2.id, requestType: 'WFH', title: 'Work From Home Request — Sept 15', description: 'Working remotely due to internet installation at home.', status: 'Pending', assignedTo: 'HR Admin' },
+        { employeeId: emp3.id, requestType: 'Profile Change', title: 'Mobile Number Update Request', description: 'Requested to change mobile number', oldValue: '8444040514', newValue: '9876500000', status: 'Pending', assignedTo: 'HR Admin' }
+      ]
+    });
+
+    console.log('✅ Sample employees, attendance, leaves, queries, documents, letters, & requests seeded');
   } else {
-    console.log('⏭️  Turnover options already exist — skipped');
+    console.log('⏭️  Employees already exist — skipped');
   }
 
   console.log('\n🎉 Seed complete!');
