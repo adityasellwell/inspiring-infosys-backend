@@ -87,25 +87,28 @@ app.use((_req, res) => {
 });
 
 // ── Start Server ───────────────────────────────────────────────────
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
   console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login\n`);
 
-  try {
-    await ensureDatabaseSynced();
-    const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true } });
-    for (const emp of allEmployees) {
-      const cleanId = normalizeEmpId(emp.empId, emp.id);
-      if (emp.empId !== cleanId) {
-        await prisma.employee.update({
-          where: { id: emp.id },
-          data: { empId: cleanId }
-        });
-        console.log(`[DB Auto-Migrate] Migrated Employee #${emp.id} from '${emp.empId}' to '${cleanId}'`);
+  // Run background initialization asynchronously so server starts accepting requests immediately
+  setImmediate(async () => {
+    try {
+      await ensureDatabaseSynced();
+      const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true } });
+      for (const emp of allEmployees) {
+        const cleanId = normalizeEmpId(emp.empId, emp.id);
+        if (emp.empId !== cleanId) {
+          await prisma.employee.update({
+            where: { id: emp.id },
+            data: { empId: cleanId }
+          });
+          console.log(`[DB Auto-Migrate] Migrated Employee #${emp.id} from '${emp.empId}' to '${cleanId}'`);
+        }
       }
+    } catch (err) {
+      console.warn('[DB Auto-Migrate Notice]', err.message);
     }
-  } catch (err) {
-    console.warn('[DB Auto-Migrate Notice]', err.message);
-  }
+  });
 });

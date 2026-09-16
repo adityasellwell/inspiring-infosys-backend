@@ -1,36 +1,29 @@
-import { execSync } from 'child_process';
 import bcrypt from 'bcryptjs';
 import prisma from './prisma.js';
 
 export async function ensureDatabaseSynced() {
-  console.log('[DB Init] Syncing database schema with Hostinger MySQL...');
+  console.log('[DB Init] Checking initial database records...');
 
   try {
-    // 1. Run Prisma DB Push automatically to ensure all tables exist
-    try {
-      execSync('npx prisma db push --skip-generate', { stdio: 'inherit' });
-      console.log('[DB Init] ✅ Database schema pushed successfully');
-    } catch (pushErr) {
-      console.warn('[DB Init Notice] Schema push warning:', pushErr.message);
-    }
-
-    // 2. Ensure Admin user exists
-    const adminCount = await prisma.admin.count();
+    // 1. Ensure Admin user exists
+    const adminCount = await prisma.admin.count().catch(() => 0);
     if (adminCount === 0) {
       console.log('[DB Init] Seeding default Admin user...');
       const passwordHash = await bcrypt.hash('admin123', 10);
-      await prisma.admin.create({
-        data: {
+      await prisma.admin.upsert({
+        where: { email: 'admin@inspiringinfosys.com' },
+        update: {},
+        create: {
           email: 'admin@inspiringinfosys.com',
           password: passwordHash,
           name: 'Admin',
         }
-      });
-      console.log('[DB Init] ✅ Default Admin created (admin@inspiringinfosys.com / admin123)');
+      }).catch(err => console.warn('[DB Init Admin Seed Warning]', err.message));
+      console.log('[DB Init] ✅ Default Admin check complete');
     }
 
-    // 3. Ensure default stats exist
-    const statsCount = await prisma.stat.count();
+    // 2. Ensure default stats exist
+    const statsCount = await prisma.stat.count().catch(() => 0);
     if (statsCount === 0) {
       await prisma.stat.createMany({
         data: [
@@ -38,12 +31,11 @@ export async function ensureDatabaseSynced() {
           { label: 'Projects Done', value: '800', suffix: '+', sortOrder: 2, isActive: true },
           { label: 'Years Experience', value: '10', suffix: '+', sortOrder: 3, isActive: true },
         ]
-      });
-      console.log('[DB Init] ✅ Default Stats created');
+      }).catch(err => console.warn('[DB Init Stats Seed Warning]', err.message));
     }
 
-    // 4. Ensure default testimonials exist
-    const testimonialsCount = await prisma.testimonial.count();
+    // 3. Ensure default testimonials exist
+    const testimonialsCount = await prisma.testimonial.count().catch(() => 0);
     if (testimonialsCount === 0) {
       await prisma.testimonial.createMany({
         data: [
@@ -78,12 +70,11 @@ export async function ensureDatabaseSynced() {
             isActive: true,
           }
         ]
-      });
-      console.log('[DB Init] ✅ Default Testimonials created');
+      }).catch(err => console.warn('[DB Init Testimonials Seed Warning]', err.message));
     }
 
-    // 5. Ensure default employees exist
-    const employeesCount = await prisma.employee.count();
+    // 4. Ensure default employees exist
+    const employeesCount = await prisma.employee.count().catch(() => 0);
     if (employeesCount === 0) {
       const empPasswordHash = await bcrypt.hash('Inspire#2026', 10);
       await prisma.employee.createMany({
@@ -128,8 +119,7 @@ export async function ensureDatabaseSynced() {
             address: 'Mumbai, India'
           }
         ]
-      });
-      console.log('[DB Init] ✅ Default Employees created');
+      }).catch(err => console.warn('[DB Init Employee Seed Warning]', err.message));
     }
 
   } catch (error) {
