@@ -156,23 +156,23 @@ export const getEmployeeById = async (req, res) => {
 
     if (!employee) {
       const mockEmployees = {
-        '1': { id: 1, empId: 'INS001', name: 'Rahul Sharma', email: 'rahul.sharma@inspiringinfosys.com', phone: '9876543210', department: 'IT', designation: 'Senior Software Engineer', joinDate: '2024-01-15', salary: 65000, status: 'Active', address: 'Mumbai, Maharashtra' },
-        '2': { id: 2, empId: 'INS002', name: 'Ananya Patel', email: 'ananya.patel@inspiringinfosys.com', phone: '9812345678', department: 'E-Commerce', designation: 'Marketplace Specialist', joinDate: '2024-06-01', salary: 48000, status: 'Active', address: 'Navi Mumbai, Maharashtra' },
-        '3': { id: 3, empId: 'INS003', name: 'Amit Verma', email: 'amit.verma@inspiringinfosys.com', phone: '9988776655', department: 'Development', designation: 'UI/UX Designer', joinDate: '2025-02-10', salary: 52000, status: 'Active', address: 'Thane, Maharashtra' },
-        '4': { id: 4, empId: 'INS004', name: 'Atul Mishra', email: 'info4alam@gmail.com', phone: '8444040514', department: 'IT', designation: 'FULL STACK', joinDate: '2026-09-01', salary: 75000, status: 'Active', address: 'Mumbai, India' }
+        '1': { id: 3, empId: 'INS001', name: 'sahil mehta', email: 'sahilmehta2324@gmail.com', phone: '8444040514', department: 'IT', designation: 'FULL STACK', joinDate: '2026-09-05', salary: 2222, status: 'Active', address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar' },
+        '3': { id: 4, empId: 'INS003', name: 'yogi', email: 'inspiringinfos@gmail.com', phone: '08444040514', department: 'IT', designation: 'Founder', joinDate: '2026-09-05', salary: 20000, status: 'Active', address: 'OPP JK TOWER, NALASOPARA EAST' },
+        '4': { id: 7, empId: 'INS004', name: 'Alam Ansari', email: 'hello@sellwell.co.in', phone: '8422953384', department: 'IT', designation: 'Software Engineer', joinDate: '2026-09-15', salary: 20000, status: 'Active', address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar' },
+        '5': { id: 8, empId: 'INS005', name: 'Aditya Jadhav', email: 'adityajadhav7123@gmail.com', phone: '9833379781', department: 'IT', designation: 'Full Stack Developer', joinDate: '2026-09-15', salary: 10000, status: 'Active', address: 'Andheri West' }
       };
 
-      const fallback = mockEmployees[req.params.id] || mockEmployees['4'] || {
-        id: idParam || 4,
-        empId: 'INS004',
-        name: 'Staff Member',
-        email: 'staff@inspiringinfosys.com',
-        phone: '9876543210',
+      const fallback = mockEmployees[req.params.id] || mockEmployees['5'] || {
+        id: idParam || 8,
+        empId: 'INS005',
+        name: 'Aditya Jadhav',
+        email: 'adityajadhav7123@gmail.com',
+        phone: '9833379781',
         department: 'IT',
-        designation: 'Software Engineer',
-        salary: 60000,
+        designation: 'Full Stack Developer',
+        salary: 10000,
         status: 'Active',
-        address: 'Mumbai, Maharashtra'
+        address: 'Andheri West'
       };
 
       return res.json({
