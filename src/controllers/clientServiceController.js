@@ -126,9 +126,17 @@ export const createClientService = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Client name, client email, service name, and expiry date are required' });
     }
 
-    const cleanServiceName = serviceName.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].trim();
-    const purchaseD = purchaseDate ? new Date(purchaseDate).toISOString().split('T')[0] : null;
-    const expiryD = new Date(expiryDate).toISOString().split('T')[0];
+    const parseValidDate = (val) => {
+      if (!val) return null;
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const cleanServiceName = serviceName ? serviceName.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].trim() : 'service';
+    const parsedPurchaseDate = parseValidDate(purchaseDate);
+    const parsedExpiryDate = parseValidDate(expiryDate) || new Date();
+    const purchaseD = parsedPurchaseDate ? parsedPurchaseDate.toISOString().split('T')[0] : null;
+    const expiryD = parsedExpiryDate.toISOString().split('T')[0];
     const amountVal = renewalAmount ? parseFloat(renewalAmount) : 0;
     const isAuto = autoRenew ? 1 : 0;
 
@@ -144,8 +152,8 @@ export const createClientService = async (req, res) => {
           serviceType: serviceType || 'Domain Name',
           serviceName: cleanServiceName,
           provider: provider || 'GoDaddy',
-          purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-          expiryDate: new Date(expiryDate),
+          purchaseDate: parsedPurchaseDate,
+          expiryDate: parsedExpiryDate,
           renewalAmount: amountVal,
           autoRenew: Boolean(autoRenew),
           notes: notes ? notes.trim() : ''
