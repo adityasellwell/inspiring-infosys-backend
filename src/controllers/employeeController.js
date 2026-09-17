@@ -449,40 +449,42 @@ export const deleteEmployee = async (req, res) => {
     const normalizedId = normalizeEmpId(id, empIdNum);
     const permanent = req.query.permanent === 'true';
 
-    const existing = await prisma.employee.findFirst({
-      where: {
-        OR: [
-          ...(isNaN(empIdNum) ? [] : [{ id: empIdNum }]),
-          { empId: id },
-          { empId: normalizedId },
-          { email: id },
-          { name: id }
-        ]
+    return await dbQuery(async () => {
+      const existing = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            ...(isNaN(empIdNum) ? [] : [{ id: empIdNum }]),
+            { empId: id },
+            { empId: normalizedId },
+            { email: id },
+            { name: id }
+          ]
+        }
+      });
+
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Employee record not found' });
+      }
+
+      if (permanent) {
+        // Clean up child tables to prevent foreign key constraint failures
+        await prisma.attendance.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.leaveRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.salarySlip.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.employeeDocument.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.hRLetter.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.employeeRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+
+        await prisma.employee.delete({ where: { id: existing.id } });
+        return res.json({ success: true, message: 'Employee record permanently deleted' });
+      } else {
+        const deactivated = await prisma.employee.update({
+          where: { id: existing.id },
+          data: { status: 'Inactive' }
+        });
+        return res.json({ success: true, data: deactivated, message: 'Employee deactivated. All historical logs preserved.' });
       }
     });
-
-    if (!existing) {
-      return res.status(404).json({ success: false, message: 'Employee record not found' });
-    }
-
-    if (permanent) {
-      // Clean up child tables to prevent foreign key constraint failures
-      await prisma.attendance.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-      await prisma.leaveRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-      await prisma.salarySlip.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-      await prisma.employeeDocument.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-      await prisma.hRLetter.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-      await prisma.employeeRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-
-      await prisma.employee.delete({ where: { id: existing.id } });
-      return res.json({ success: true, message: 'Employee record permanently deleted' });
-    } else {
-      const deactivated = await prisma.employee.update({
-        where: { id: existing.id },
-        data: { status: 'Inactive' }
-      });
-      return res.json({ success: true, data: deactivated, message: 'Employee deactivated. All historical logs preserved.' });
-    }
   } catch (error) {
     console.error('[DELETE /api/employees/:id]', error);
     return res.status(500).json({ success: false, message: error.message || 'Failed to delete employee' });

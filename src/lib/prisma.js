@@ -18,10 +18,14 @@ export async function dbQuery(fn, retries = 2) {
         msg.includes('EPIPE') ||
         msg.includes('Can\'t reach database server') ||
         msg.includes('Engine error') ||
-        msg.includes('socket hung up');
+        msg.includes('socket hung up') ||
+        msg.includes('PANIC') ||
+        msg.includes('timer has gone away') ||
+        msg.includes('non-recoverable error') ||
+        msg.includes('Query Engine');
 
       if (isConnError && i < retries) {
-        console.warn(`[Prisma DB Connection Error] Reconnecting to MySQL (Attempt ${i + 1}/${retries})...`);
+        console.warn(`[Prisma Query Engine / DB Panic Recovery] Restarting Engine & Reconnecting to MySQL (Attempt ${i + 1}/${retries})...`);
         try {
           await prisma.$disconnect();
         } catch (_) {}
@@ -30,7 +34,7 @@ export async function dbQuery(fn, retries = 2) {
         } catch (connErr) {
           console.error('[Prisma Reconnect Failed]', connErr.message);
         }
-        await new Promise(r => setTimeout(r, 300 * (i + 1)));
+        await new Promise(r => setTimeout(r, 400 * (i + 1)));
         continue;
       }
       throw err;
