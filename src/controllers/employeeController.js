@@ -202,7 +202,7 @@ export const createEmployee = async (req, res) => {
     // Auto-generate or format Employee ID to INS001, INS002...
     let cleanEmpId = (empId || '').trim();
     if (!cleanEmpId) {
-      const allEmps = await prisma.employee.findMany({ select: { empId: true, id: true } });
+      const allEmps = await dbQuery(() => prisma.employee.findMany({ select: { empId: true, id: true } }));
       let maxNum = 0;
       allEmps.forEach(e => {
         const match = String(e.empId || e.id || '').match(/\d+/);
@@ -229,12 +229,19 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Official Email address is required.' });
     }
 
-    const existingEmpId = await prisma.employee.findFirst({ where: { empId: cleanEmpId } });
+    const existingEmpId = await dbQuery(() => prisma.employee.findFirst({ where: { empId: cleanEmpId } }));
     if (existingEmpId) {
       return res.status(400).json({ success: false, message: `Employee ID '${cleanEmpId}' is already registered.` });
     }
 
-    const existingEmail = await prisma.employee.findFirst({ where: { email: cleanEmail } });
+    const existingEmail = await dbQuery(() => prisma.employee.findFirst({
+      where: {
+        OR: [
+          { email: cleanEmail },
+          { personalEmail: cleanEmail }
+        ]
+      }
+    }));
     if (existingEmail) {
       return res.status(400).json({ success: false, message: `Email '${cleanEmail}' is already registered.` });
     }
@@ -246,7 +253,7 @@ export const createEmployee = async (req, res) => {
     const parsedDob = dob ? new Date(dob) : null;
     const parsedConfirmationDate = confirmationDate ? new Date(confirmationDate) : null;
 
-    const newEmployee = await prisma.employee.create({
+    const newEmployee = await dbQuery(() => prisma.employee.create({
       data: {
         empId: cleanEmpId,
         name: actualName,
@@ -298,9 +305,9 @@ export const createEmployee = async (req, res) => {
         aadharUrl: aadharUrl || '',
         panUrl: panUrl || ''
       }
-    });
+    }));
 
-    await prisma.auditLog.create({
+    dbQuery(() => prisma.auditLog.create({
       data: {
         changedBy: req.user?.name || 'Admin',
         action: 'CREATE_EMPLOYEE',
@@ -308,12 +315,12 @@ export const createEmployee = async (req, res) => {
         entityId: String(newEmployee.id),
         newValue: `Created employee ${newEmployee.name} (${newEmployee.empId})`
       }
-    }).catch(() => {});
+    })).catch(() => {});
 
     return res.json({ success: true, data: newEmployee, message: 'Employee added successfully!' });
   } catch (error) {
     console.error('[POST /api/employees]', error);
-    return res.status(500).json({ success: false, message: 'Server error creating employee' });
+    return res.status(500).json({ success: false, message: 'Server error creating employee: ' + (error.message || '') });
   }
 };
 
