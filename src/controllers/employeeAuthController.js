@@ -339,30 +339,31 @@ export const clockIn = async (req, res) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-    // Use noon local time so MySQL @db.Date column stores exact calendar date
     const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
 
-    const existing = await prisma.attendance.findFirst({
+    let existing = await dbQuery(() => prisma.attendance.findFirst({
       where: {
         employeeId: req.employee.id,
-        OR: [
-          {
-            checkIn: {
-              gte: startOfDay,
-              lte: endOfDay,
-            },
-          },
-          {
-            date: {
-              gte: startOfDay,
-              lte: endOfDay,
-            },
-          },
-        ],
+        checkIn: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       orderBy: { id: 'desc' },
-    });
+    })).catch(() => null);
+
+    if (!existing) {
+      existing = await dbQuery(() => prisma.attendance.findFirst({
+        where: {
+          employeeId: req.employee.id,
+          createdAt: {
+            gte: startOfDay,
+            lte: endOfDay,
+          }
+        },
+        orderBy: { id: 'desc' },
+      })).catch(() => null);
+    }
 
     if (existing && existing.checkIn) {
       return res.status(400).json({
@@ -376,23 +377,22 @@ export const clockIn = async (req, res) => {
     const currentMinute = checkInTime.getMinutes();
 
     // Official Shift: 10:00 AM - 7:00 PM. Grace period up to 10:15 AM.
-    // Allow clock-in at any time so late arrivals are always recorded for Admin review.
     const isLate = currentHour > 10 || (currentHour === 10 && currentMinute > 15);
     const status = isLate ? "Late" : "Present";
     const notePrefix = isLate ? "Late arrival clocked in via Employee Dashboard" : "Clocked in via Employee Dashboard";
 
     let attendance;
     if (existing) {
-      attendance = await prisma.attendance.update({
+      attendance = await dbQuery(() => prisma.attendance.update({
         where: { id: existing.id },
         data: {
           checkIn: checkInTime,
           status,
           notes: req.body.notes || notePrefix,
         },
-      });
+      }));
     } else {
-      attendance = await prisma.attendance.create({
+      attendance = await dbQuery(() => prisma.attendance.create({
         data: {
           employeeId: req.employee.id,
           date: todayNoon,
@@ -400,7 +400,7 @@ export const clockIn = async (req, res) => {
           status,
           notes: req.body.notes || notePrefix,
         },
-      });
+      }));
     }
 
     return res.json({
@@ -410,7 +410,7 @@ export const clockIn = async (req, res) => {
     });
   } catch (error) {
     console.error("[POST /api/employee-portal/clock-in]", error);
-    return res.status(500).json({ success: false, message: "Clock in failed: " + (error.message || "") });
+    return res.status(500).json({ success: false, message: error.message || "Clock in failed" });
   }
 };
 
@@ -421,42 +421,32 @@ export const clockOut = async (req, res) => {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const existing = await prisma.attendance.findFirst({
+    let existing = await dbQuery(() => prisma.attendance.findFirst({
       where: {
         employeeId: req.employee.id,
-        OR: [
-          {
-            checkIn: {
-              gte: startOfDay,
-              lte: endOfDay,
-            },
-          },
-          {
-            date: {
-              gte: startOfDay,
-              lte: endOfDay,
-            },
-          },
-        ],
+        checkIn: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       orderBy: { id: 'desc' },
-    });
+    })).catch(() => null);
 
     if (!existing || !existing.checkIn) {
       return res.status(400).json({ success: false, message: "You have not clocked in for today yet!" });
     }
 
-    const updated = await prisma.attendance.update({
+    const updated = await dbQuery(() => prisma.attendance.update({
       where: { id: existing.id },
       data: {
         checkOut: new Date(),
       },
-    });
+    }));
 
     return res.json({ success: true, data: updated, message: "Successfully clocked out for today!" });
   } catch (error) {
     console.error("[POST /api/employee-portal/clock-out]", error);
-    return res.status(500).json({ success: false, message: "Clock out failed" });
+    return res.status(500).json({ success: false, message: error.message || "Clock out failed" });
   }
 };
 
