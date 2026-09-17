@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db:push": "npx prisma db push",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "db:export": "C:\\xampp\\mysql\\bin\\mysqldump.exe -u root inspiring_infosys > local_db_dump.sql"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
