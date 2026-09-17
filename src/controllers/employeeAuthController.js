@@ -138,8 +138,17 @@ export const login = async (req, res) => {
 // ── 2. Get Logged In Employee Full Dashboard Data ─────────────────
 export const getMe = async (req, res) => {
   try {
-    let employee = await dbQuery(() => prisma.employee.findUnique({
-      where: { id: req.employee.id },
+    const empIdNum = parseInt(req.employee.id, 10);
+    const cleanEmail = (req.employee.email || "").toLowerCase();
+
+    let employee = await dbQuery(() => prisma.employee.findFirst({
+      where: {
+        OR: [
+          ...(isNaN(empIdNum) ? [] : [{ id: empIdNum }]),
+          ...(cleanEmail ? [{ email: cleanEmail }] : []),
+          ...(req.employee.empId ? [{ empId: req.employee.empId }] : [])
+        ]
+      },
       include: {
         attendances: {
           orderBy: { id: "desc" },
@@ -162,12 +171,7 @@ export const getMe = async (req, res) => {
           orderBy: { id: "desc" },
         },
       },
-    })).catch(async (err) => {
-      console.warn("Include relation fetch warning in getMe:", err.message);
-      return await dbQuery(() => prisma.employee.findUnique({
-        where: { id: req.employee.id }
-      }));
-    });
+    }));
 
     if (!employee) {
       return res.status(404).json({ success: false, message: "Employee record not found" });
