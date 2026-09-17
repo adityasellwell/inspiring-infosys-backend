@@ -137,11 +137,16 @@ export async function ensureDatabaseSynced() {
       }
     ];
 
-    // Remove old dummy seed employees if present
+    // Wipe any old dummy seed employees so ONLY real employees remain
     await prisma.employee.deleteMany({
       where: {
         email: {
-          in: ['rahul.sharma@inspiringinfosys.com', 'ananya.patel@inspiringinfosys.com', 'amit.verma@inspiringinfosys.com']
+          notIn: [
+            'sahilmehta2324@gmail.com',
+            'inspiringinfos@gmail.com',
+            'hello@sellwell.co.in',
+            'adityajadhav7123@gmail.com'
+          ]
         }
       }
     }).catch(() => {});
