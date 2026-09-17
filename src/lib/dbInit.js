@@ -73,7 +73,149 @@ export async function ensureDatabaseSynced() {
       }).catch(err => console.warn('[DB Init Testimonials Seed Warning]', err.message));
     }
 
-    // 4. Ensure tables exist in MySQL database
+    // 4. Ensure all database tables exist in MySQL database
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        emp_id VARCHAR(191) NOT NULL DEFAULT '',
+        name VARCHAR(191) NOT NULL,
+        first_name VARCHAR(191) NOT NULL DEFAULT '',
+        middle_name VARCHAR(191) NOT NULL DEFAULT '',
+        last_name VARCHAR(191) NOT NULL DEFAULT '',
+        email VARCHAR(191) NOT NULL,
+        personal_email VARCHAR(191) NOT NULL DEFAULT '',
+        password VARCHAR(191) NOT NULL DEFAULT '',
+        phone VARCHAR(191) NOT NULL DEFAULT '',
+        alt_phone VARCHAR(191) NOT NULL DEFAULT '',
+        dob DATE NULL,
+        gender VARCHAR(191) NOT NULL DEFAULT 'Male',
+        address TEXT NULL,
+        current_address TEXT NULL,
+        permanent_address TEXT NULL,
+        city VARCHAR(191) NOT NULL DEFAULT 'Mumbai',
+        state VARCHAR(191) NOT NULL DEFAULT 'Maharashtra',
+        country VARCHAR(191) NOT NULL DEFAULT 'India',
+        pincode VARCHAR(191) NOT NULL DEFAULT '',
+        emergency_contact_name VARCHAR(191) NOT NULL DEFAULT '',
+        emergency_relationship VARCHAR(191) NOT NULL DEFAULT '',
+        emergency_phone VARCHAR(191) NOT NULL DEFAULT '',
+        emergency_alt_phone VARCHAR(191) NOT NULL DEFAULT '',
+        department VARCHAR(191) NOT NULL DEFAULT '',
+        designation VARCHAR(191) NOT NULL DEFAULT '',
+        reporting_manager VARCHAR(191) NOT NULL DEFAULT 'HR Manager',
+        join_date DATE NOT NULL,
+        confirmation_date DATE NULL,
+        employment_type VARCHAR(191) NOT NULL DEFAULT 'Full-Time',
+        work_location VARCHAR(191) NOT NULL DEFAULT 'Mumbai Office',
+        work_mode VARCHAR(191) NOT NULL DEFAULT 'On-site',
+        shift VARCHAR(191) NOT NULL DEFAULT 'General (9:30 AM - 6:30 PM)',
+        probation_period VARCHAR(191) NOT NULL DEFAULT '3 Months',
+        status VARCHAR(191) NOT NULL DEFAULT 'Active',
+        salary DECIMAL(10,2) NOT NULL DEFAULT 0,
+        salary_structure VARCHAR(191) NOT NULL DEFAULT 'Standard Corporate',
+        basic_salary DECIMAL(10,2) NOT NULL DEFAULT 0,
+        hra DECIMAL(10,2) NOT NULL DEFAULT 0,
+        allowances DECIMAL(10,2) NOT NULL DEFAULT 0,
+        deductions DECIMAL(10,2) NOT NULL DEFAULT 0,
+        bank_name VARCHAR(191) NOT NULL DEFAULT '',
+        account_number VARCHAR(191) NOT NULL DEFAULT '',
+        ifsc VARCHAR(191) NOT NULL DEFAULT '',
+        pan_number VARCHAR(191) NOT NULL DEFAULT '',
+        uan_number VARCHAR(191) NOT NULL DEFAULT '',
+        tax_info VARCHAR(191) NOT NULL DEFAULT 'New Tax Regime',
+        photo_url LONGTEXT NULL,
+        aadhar_url LONGTEXT NULL,
+        pan_url LONGTEXT NULL,
+        doc_verified TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init Employees Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS attendances (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        date DATE NOT NULL,
+        check_in DATETIME(3) NULL,
+        check_out DATETIME(3) NULL,
+        status VARCHAR(191) NOT NULL DEFAULT 'Present',
+        notes TEXT NULL,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init Attendances Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS salary_slips (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        month VARCHAR(191) NOT NULL,
+        year INT NOT NULL,
+        basic_pay DECIMAL(10,2) NOT NULL,
+        hra DECIMAL(10,2) NOT NULL DEFAULT 0,
+        allowances DECIMAL(10,2) NOT NULL DEFAULT 0,
+        deductions DECIMAL(10,2) NOT NULL DEFAULT 0,
+        net_salary DECIMAL(10,2) NOT NULL,
+        issued_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init SalarySlips Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS leave_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        leave_type VARCHAR(191) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        reason TEXT NOT NULL,
+        status VARCHAR(191) NOT NULL DEFAULT 'Pending',
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init LeaveRequests Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS employee_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        document_name VARCHAR(191) NOT NULL,
+        category VARCHAR(191) NOT NULL,
+        file_url LONGTEXT NOT NULL,
+        uploaded_by VARCHAR(191) NOT NULL DEFAULT 'Admin',
+        status VARCHAR(191) NOT NULL DEFAULT 'Verified',
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init EmployeeDocuments Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS hr_letters (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        letter_type VARCHAR(191) NOT NULL,
+        title VARCHAR(191) NOT NULL,
+        content TEXT NOT NULL,
+        pdf_url LONGTEXT NULL,
+        sent_to_employee TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init HRLetters Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS employee_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        request_type VARCHAR(191) NOT NULL,
+        title VARCHAR(191) NOT NULL,
+        description TEXT NOT NULL,
+        status VARCHAR(191) NOT NULL DEFAULT 'Pending',
+        old_value TEXT NULL,
+        new_value TEXT NULL,
+        assigned_to VARCHAR(191) NOT NULL DEFAULT 'HR Admin',
+        reviewed_by VARCHAR(191) NULL,
+        reviewed_at DATETIME(3) NULL,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init EmployeeRequests Table Warning]', err.message));
+
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS client_services (
         id INT AUTO_INCREMENT PRIMARY KEY,
