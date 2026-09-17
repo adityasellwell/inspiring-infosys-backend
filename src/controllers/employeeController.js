@@ -445,15 +445,18 @@ export const updateEmployee = async (req, res) => {
 export const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const empId = parseInt(id, 10);
+    const empIdNum = parseInt(id, 10);
+    const normalizedId = normalizeEmpId(id, empIdNum);
     const permanent = req.query.permanent === 'true';
 
     const existing = await prisma.employee.findFirst({
       where: {
         OR: [
-          ...(isNaN(empId) ? [] : [{ id: empId }]),
+          ...(isNaN(empIdNum) ? [] : [{ id: empIdNum }]),
           { empId: id },
-          { email: id }
+          { empId: normalizedId },
+          { email: id },
+          { name: id }
         ]
       }
     });
