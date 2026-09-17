@@ -138,38 +138,47 @@ export const login = async (req, res) => {
 // ── 2. Get Logged In Employee Full Dashboard Data ─────────────────
 export const getMe = async (req, res) => {
   try {
-    const employee = await dbQuery(() => prisma.employee.findUnique({
+    let employee = await dbQuery(() => prisma.employee.findUnique({
       where: { id: req.employee.id },
       include: {
         attendances: {
-          orderBy: [
-            { checkIn: "desc" },
-            { date: "desc" }
-          ],
+          orderBy: { id: "desc" },
           take: 31,
         },
         salarySlips: {
-          orderBy: { issuedAt: "desc" },
+          orderBy: { id: "desc" },
         },
         leaveRequests: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
         },
         queries: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
         },
         dailyWorkReports: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
           take: 15,
         },
         hrLetters: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
         },
       },
-    }));
+    })).catch(async (err) => {
+      console.warn("Include relation fetch warning in getMe:", err.message);
+      return await dbQuery(() => prisma.employee.findUnique({
+        where: { id: req.employee.id }
+      }));
+    });
 
     if (!employee) {
       return res.status(404).json({ success: false, message: "Employee record not found" });
     }
+
+    if (!employee.attendances) employee.attendances = [];
+    if (!employee.salarySlips) employee.salarySlips = [];
+    if (!employee.leaveRequests) employee.leaveRequests = [];
+    if (!employee.queries) employee.queries = [];
+    if (!employee.dailyWorkReports) employee.dailyWorkReports = [];
+    if (!employee.hrLetters) employee.hrLetters = [];
 
     const cleanEmpId = normalizeEmpId(employee.empId, employee.id);
     if (employee.empId !== cleanEmpId) {
@@ -181,9 +190,9 @@ export const getMe = async (req, res) => {
     }
 
     const notices = await dbQuery(() => prisma.notice.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { id: "desc" },
       take: 10,
-    }));
+    })).catch(() => []);
 
     return res.json({
       success: true,
@@ -194,7 +203,7 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     console.error("[GET /api/employee-portal/me]", error);
-    return res.status(500).json({ success: false, message: "Server error fetching dashboard data" });
+    return res.status(500).json({ success: false, message: error.message || "Server error fetching dashboard data" });
   }
 };
 
