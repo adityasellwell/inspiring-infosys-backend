@@ -73,53 +73,99 @@ export async function ensureDatabaseSynced() {
       }).catch(err => console.warn('[DB Init Testimonials Seed Warning]', err.message));
     }
 
-    // 4. Ensure default employees exist
-    const employeesCount = await prisma.employee.count().catch(() => 0);
-    if (employeesCount === 0) {
-      const empPasswordHash = await bcrypt.hash('Inspire#2026', 10);
-      await prisma.employee.createMany({
-        data: [
-          {
-            empId: 'INS001',
-            name: 'Rahul Sharma',
-            email: 'rahul.sharma@inspiringinfosys.com',
-            password: empPasswordHash,
-            phone: '9876543210',
-            department: 'IT',
-            designation: 'Senior Software Engineer',
-            joinDate: new Date('2024-01-15'),
-            salary: 65000.00,
-            status: 'Active',
-            address: 'Mumbai, Maharashtra'
-          },
-          {
-            empId: 'INS002',
-            name: 'Ananya Patel',
-            email: 'ananya.patel@inspiringinfosys.com',
-            password: empPasswordHash,
-            phone: '9812345678',
-            department: 'E-Commerce',
-            designation: 'Marketplace Specialist',
-            joinDate: new Date('2024-06-01'),
-            salary: 48000.00,
-            status: 'Active',
-            address: 'Navi Mumbai, Maharashtra'
-          },
-          {
-            empId: 'INS003',
-            name: 'Atul Mishra',
-            email: 'info4alam@gmail.com',
-            password: empPasswordHash,
-            phone: '8444040514',
-            department: 'IT',
-            designation: 'FULL STACK',
-            joinDate: new Date('2026-09-01'),
-            salary: 75000.00,
-            status: 'Active',
-            address: 'Mumbai, India'
-          }
-        ]
-      }).catch(err => console.warn('[DB Init Employee Seed Warning]', err.message));
+    // 4. Ensure real employees exist (upsert real local employees list)
+    const realEmployees = [
+      {
+        empId: 'INS001',
+        name: 'sahil mehta',
+        email: 'sahilmehta2324@gmail.com',
+        password: '$2a$10$SPXFnnICNFCojagJeLKlJOjmt/uq44HroHsmaTnhCIL7SL24lIsC2',
+        phone: '8444040514',
+        department: 'IT',
+        designation: 'FULL STACK',
+        reportingManager: 'HR Manager',
+        joinDate: new Date('2026-09-05'),
+        employmentType: 'Intern',
+        status: 'Active',
+        salary: 2222.00,
+        address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar'
+      },
+      {
+        empId: 'INS003',
+        name: 'yogi',
+        email: 'inspiringinfos@gmail.com',
+        password: '$2a$10$/3W5XN9x9UgXpPDWgtnG0uN4YOspE2qW6YfQlxh4fJWXUF3/Rxb4a',
+        phone: '08444040514',
+        department: 'IT',
+        designation: 'Founder',
+        reportingManager: 'HR Manager',
+        joinDate: new Date('2026-09-05'),
+        employmentType: 'Full-Time',
+        status: 'Active',
+        salary: 20000.00,
+        address: 'OPP JK TOWER, NALASOPARA EAST'
+      },
+      {
+        empId: 'INS004',
+        name: 'Alam Ansari',
+        email: 'hello@sellwell.co.in',
+        password: '$2a$10$sSVrIIoAY8fBTIK7YO46XeYKAxgY3EphGes/s7owLgnJ6i.zPCaXS',
+        phone: '8422953384',
+        department: 'IT',
+        designation: 'Software Engineer',
+        reportingManager: 'HR Manager',
+        joinDate: new Date('2026-09-15'),
+        employmentType: 'Full-Time',
+        status: 'Active',
+        salary: 20000.00,
+        address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar'
+      },
+      {
+        empId: 'INS005',
+        name: 'Aditya  Jadhav',
+        email: 'adityajadhav7123@gmail.com',
+        password: '$2a$10$BIBDYpCrWd1p3NAf0wTDDeUrgzdtrn3ECNOhH9lB8Fs4pRDgzgPNi',
+        phone: '9833379781',
+        department: 'IT',
+        designation: 'Full Stack Developer',
+        reportingManager: 'CEO',
+        joinDate: new Date('2026-09-15'),
+        employmentType: 'Full-Time',
+        status: 'Active',
+        salary: 10000.00,
+        address: 'Andheri West'
+      }
+    ];
+
+    // Remove old dummy seed employees if present
+    await prisma.employee.deleteMany({
+      where: {
+        email: {
+          in: ['rahul.sharma@inspiringinfosys.com', 'ananya.patel@inspiringinfosys.com', 'amit.verma@inspiringinfosys.com']
+        }
+      }
+    }).catch(() => {});
+
+    for (const emp of realEmployees) {
+      const existing = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            { email: emp.email },
+            { empId: emp.empId }
+          ]
+        }
+      }).catch(() => null);
+
+      if (existing) {
+        await prisma.employee.update({
+          where: { id: existing.id },
+          data: emp
+        }).catch(err => console.warn('[DB Init Employee Update Warning]', err.message));
+      } else {
+        await prisma.employee.create({
+          data: emp
+        }).catch(err => console.warn('[DB Init Employee Create Warning]', err.message));
+      }
     }
 
   } catch (error) {
