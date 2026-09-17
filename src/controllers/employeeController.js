@@ -145,7 +145,9 @@ export const getEmployeeById = async (req, res) => {
         OR: [
           ...(isNaN(idParam) ? [] : [{ id: idParam }]),
           { empId: req.params.id },
-          { empId: normalizedParam }
+          { empId: normalizedParam },
+          { email: req.params.id },
+          { name: req.params.id }
         ]
       },
       include: {
@@ -161,40 +163,7 @@ export const getEmployeeById = async (req, res) => {
     });
 
     if (!employee) {
-      const mockEmployees = {
-        '1': { id: 3, empId: 'INS001', name: 'sahil mehta', email: 'sahilmehta2324@gmail.com', phone: '8444040514', department: 'IT', designation: 'FULL STACK', joinDate: '2026-09-05', salary: 2222, status: 'Active', address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar' },
-        '3': { id: 4, empId: 'INS003', name: 'yogi', email: 'inspiringinfos@gmail.com', phone: '08444040514', department: 'IT', designation: 'Founder', joinDate: '2026-09-05', salary: 20000, status: 'Active', address: 'OPP JK TOWER, NALASOPARA EAST' },
-        '4': { id: 7, empId: 'INS004', name: 'Alam Ansari', email: 'hello@sellwell.co.in', phone: '8422953384', department: 'IT', designation: 'Software Engineer', joinDate: '2026-09-15', salary: 20000, status: 'Active', address: 'R N B, ADARSH NIWAS, 408, 4th, Palghar' },
-        '5': { id: 8, empId: 'INS005', name: 'Aditya Jadhav', email: 'adityajadhav7123@gmail.com', phone: '9833379781', department: 'IT', designation: 'Full Stack Developer', joinDate: '2026-09-15', salary: 10000, status: 'Active', address: 'Andheri West' }
-      };
-
-      const fallback = mockEmployees[req.params.id] || mockEmployees['5'] || {
-        id: idParam || 8,
-        empId: 'INS005',
-        name: 'Aditya Jadhav',
-        email: 'adityajadhav7123@gmail.com',
-        phone: '9833379781',
-        department: 'IT',
-        designation: 'Full Stack Developer',
-        salary: 10000,
-        status: 'Active',
-        address: 'Andheri West'
-      };
-
-      return res.json({
-        success: true,
-        data: {
-          ...fallback,
-          attendances: [],
-          salarySlips: [],
-          leaveRequests: [],
-          queries: [],
-          dailyWorkReports: [],
-          documents: [],
-          hrLetters: [],
-          employeeRequests: []
-        }
-      });
+      return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
     const formatted = normalizeEmpId(employee.empId, employee.id);
