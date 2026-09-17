@@ -81,6 +81,21 @@ app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'Inspiring Infosys API is running' });
 });
 
+app.get('/api/sync-db', async (_req, res) => {
+  try {
+    await ensureDatabaseSynced();
+    const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true, name: true, email: true } });
+    return res.json({
+      success: true,
+      message: 'Prisma Hostinger Database auto-synced successfully!',
+      employeeCount: allEmployees.length,
+      employees: allEmployees
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── 404 Handler ────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
