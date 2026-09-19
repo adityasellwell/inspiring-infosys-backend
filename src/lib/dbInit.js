@@ -252,6 +252,40 @@ export async function ensureDatabaseSynced() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `).catch(err => console.warn('[DB Init AuditLogs Table Warning]', err.message));
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS employee_queries (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        subject VARCHAR(191) NOT NULL,
+        message TEXT NOT NULL,
+        reply TEXT NULL,
+        status VARCHAR(191) NOT NULL DEFAULT 'Pending',
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init EmployeeQueries Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS notices (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(191) NOT NULL,
+        content TEXT NOT NULL,
+        priority VARCHAR(191) NOT NULL DEFAULT 'Medium',
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init Notices Table Warning]', err.message));
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS daily_work_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        date DATE NOT NULL,
+        summary TEXT NOT NULL,
+        hours_worked DOUBLE NOT NULL DEFAULT 8.0,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(err => console.warn('[DB Init DailyWorkReports Table Warning]', err.message));
+
     // 5. Ensure real initial employees exist ONLY if employee database is empty
     const empCount = await prisma.employee.count().catch(() => 0);
     if (empCount === 0) {
