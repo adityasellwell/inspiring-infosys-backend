@@ -336,9 +336,12 @@ export const updateProfile = async (req, res) => {
 export const clockIn = async (req, res) => {
   try {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+    const istTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate = new Date(istTimeStr);
+
+    const startOfDay = new Date(istDate.getFullYear(), istDate.getMonth(), istDate.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(istDate.getFullYear(), istDate.getMonth(), istDate.getDate(), 23, 59, 59, 999);
+    const todayNoon = new Date(istDate.getFullYear(), istDate.getMonth(), istDate.getDate(), 12, 0, 0, 0);
 
     let existing = await dbQuery(() => prisma.attendance.findFirst({
       where: {
@@ -371,21 +374,27 @@ export const clockIn = async (req, res) => {
       });
     }
 
-    const checkInTime = new Date();
-    const currentHour = checkInTime.getHours();
-    const currentMinute = checkInTime.getMinutes();
+    const currentHour = istDate.getHours();
+    const currentMinute = istDate.getMinutes();
 
-    // Official Shift: 10:00 AM - 7:00 PM. Grace period up to 10:15 AM.
+    // Official Shift: 10:00 AM - 7:00 PM. Grace period up to 10:15 AM IST.
     const isLate = currentHour > 10 || (currentHour === 10 && currentMinute > 15);
     const status = isLate ? "Late" : "Present";
     const notePrefix = isLate ? "Late arrival clocked in via Employee Dashboard" : "Clocked in via Employee Dashboard";
+
+    const formattedTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
 
     let attendance;
     if (existing) {
       attendance = await dbQuery(() => prisma.attendance.update({
         where: { id: existing.id },
         data: {
-          checkIn: checkInTime,
+          checkIn: now,
           status,
           notes: req.body.notes || notePrefix,
         },
@@ -395,7 +404,7 @@ export const clockIn = async (req, res) => {
         data: {
           employeeId: req.employee.id,
           date: todayNoon,
-          checkIn: checkInTime,
+          checkIn: now,
           status,
           notes: req.body.notes || notePrefix,
         },
@@ -405,7 +414,7 @@ export const clockIn = async (req, res) => {
     return res.json({
       success: true,
       data: attendance,
-      message: `Successfully clocked in at ${checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}! Status: ${status}`
+      message: `Successfully clocked in at ${formattedTime}! Status: ${status}`
     });
   } catch (error) {
     console.error("[POST /api/employee-portal/clock-in]", error);
@@ -417,8 +426,11 @@ export const clockIn = async (req, res) => {
 export const clockOut = async (req, res) => {
   try {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const istTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate = new Date(istTimeStr);
+
+    const startOfDay = new Date(istDate.getFullYear(), istDate.getMonth(), istDate.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(istDate.getFullYear(), istDate.getMonth(), istDate.getDate(), 23, 59, 59, 999);
 
     let existing = await dbQuery(() => prisma.attendance.findFirst({
       where: {
@@ -435,14 +447,21 @@ export const clockOut = async (req, res) => {
       return res.status(400).json({ success: false, message: "You have not clocked in for today yet!" });
     }
 
+    const formattedTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
     const updated = await dbQuery(() => prisma.attendance.update({
       where: { id: existing.id },
       data: {
-        checkOut: new Date(),
+        checkOut: now,
       },
     }));
 
-    return res.json({ success: true, data: updated, message: "Successfully clocked out for today!" });
+    return res.json({ success: true, data: updated, message: `Successfully clocked out at ${formattedTime}!` });
   } catch (error) {
     console.error("[POST /api/employee-portal/clock-out]", error);
     return res.status(500).json({ success: false, message: error.message || "Clock out failed" });
