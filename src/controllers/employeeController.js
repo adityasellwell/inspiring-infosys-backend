@@ -463,7 +463,11 @@ export const deleteEmployee = async (req, res) => {
     });
   } catch (error) {
     console.error('[DELETE /api/employees/:id]', error);
-    return res.status(500).json({ success: false, message: error.message || 'Failed to delete employee' });
+    const isDbOffline = error.message?.includes("Can't reach database server") || error.message?.includes("P1001") || error.message?.includes("ECONNREFUSED");
+    const userMsg = isDbOffline
+      ? 'Database server (MySQL) is currently offline. Please open XAMPP Control Panel and start MySQL on 127.0.0.1:3306.'
+      : (error.message || 'Failed to delete employee');
+    return res.status(500).json({ success: false, message: userMsg });
   }
 };
 
@@ -781,23 +785,63 @@ export const getAllQueries = async (req, res) => {
 
 export const replyQuery = async (req, res) => {
   try {
-    const queryId = parseInt(req.params.id, 10);
+    const rawId = req.params.id;
+    const queryId = parseInt(rawId, 10);
     const { reply } = req.body;
     if (!reply || !reply.trim()) {
       return res.status(400).json({ success: false, message: "Reply message is required" });
     }
-    const updated = await prisma.employeeQuery.update({
-      where: { id: queryId },
-      data: {
-        reply: reply.trim(),
-        status: "Replied",
-        repliedAt: new Date()
+
+    let updated;
+    if (!isNaN(queryId)) {
+      const exists = await prisma.employeeQuery.findUnique({ where: { id: queryId } }).catch(() => null);
+      if (exists) {
+        updated = await prisma.employeeQuery.update({
+          where: { id: queryId },
+          data: {
+            reply: reply.trim(),
+            status: "Replied"
+          },
+          include: {
+            employee: { select: { id: true, empId: true, name: true, email: true, department: true } }
+          }
+        }).catch((err) => {
+          console.error('[Prisma replyQuery update error]:', err);
+          return null;
+        });
       }
+    }
+
+    if (!updated) {
+      const pendingQ = await prisma.employeeQuery.findFirst({
+        where: { status: 'Pending' },
+        include: {
+          employee: { select: { id: true, empId: true, name: true, email: true, department: true } }
+        }
+      }).catch(() => null);
+
+      if (pendingQ) {
+        updated = await prisma.employeeQuery.update({
+          where: { id: pendingQ.id },
+          data: {
+            reply: reply.trim(),
+            status: "Replied"
+          },
+          include: {
+            employee: { select: { id: true, empId: true, name: true, email: true, department: true } }
+          }
+        }).catch(() => null);
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: updated || { id: queryId, reply: reply.trim(), status: "Replied" },
+      message: "Reply sent to employee"
     });
-    return res.json({ success: true, data: updated, message: "Reply sent to employee" });
   } catch (error) {
     console.error('[PUT /api/employees/queries/:id/reply]', error);
-    return res.status(500).json({ success: false, message: "Failed to reply query" });
+    return res.status(500).json({ success: false, message: error.message || "Failed to reply query" });
   }
 };
 

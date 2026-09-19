@@ -57,25 +57,20 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid employee email or password" });
     }
 
-    // Automatically set/ensure Active status upon valid login attempt
-    if (employee.status !== "Active") {
-      try {
-        await dbQuery(() => prisma.employee.update({
-          where: { id: employee.id },
-          data: { status: "Active" }
-        }));
-        employee.status = "Active";
-      } catch (e) {
-        console.error("Auto-activating status error:", e);
-      }
+    if (employee.status === "Inactive" || employee.status === "Terminated" || employee.status === "Resigned" || employee.status === "Deleted") {
+      return res.status(403).json({ success: false, message: "Your employee account has been deactivated or deleted by HR." });
     }
 
     let isMatch = false;
     if (employee.password) {
-      if (employee.password.startsWith("$2a$") || employee.password.startsWith("$2b$")) {
-        isMatch = await bcrypt.compare(cleanPassword, employee.password);
-        if (!isMatch && cleanPassword !== password) {
-          isMatch = await bcrypt.compare(password, employee.password);
+      if (employee.password.startsWith("$2")) {
+        try {
+          isMatch = await bcrypt.compare(cleanPassword, employee.password);
+          if (!isMatch && cleanPassword !== password) {
+            isMatch = await bcrypt.compare(password, employee.password);
+          }
+        } catch (e) {
+          isMatch = (employee.password === cleanPassword || employee.password === password);
         }
       } else {
         isMatch = (employee.password === cleanPassword || employee.password === password);
