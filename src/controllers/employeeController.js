@@ -845,6 +845,20 @@ export const replyQuery = async (req, res) => {
   }
 };
 
+export const deleteQuery = async (req, res) => {
+  try {
+    const rawId = req.params.id;
+    const queryId = parseInt(rawId, 10);
+    if (!isNaN(queryId)) {
+      await prisma.employeeQuery.delete({ where: { id: queryId } }).catch(() => null);
+    }
+    return res.json({ success: true, message: "Query deleted successfully" });
+  } catch (error) {
+    console.error('[DELETE /api/employees/queries/:id]', error);
+    return res.status(500).json({ success: false, message: "Failed to delete query" });
+  }
+};
+
 
 
 // ── 15. DELETE ATTENDANCE LOG ─────────────────────────────────────────

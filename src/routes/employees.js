@@ -21,6 +21,7 @@ import {
   cleanDuplicateAttendanceLogs,
   getAllQueries,
   replyQuery,
+  deleteQuery,
   resetEmployeePassword
 } from "../controllers/employeeController.js";
 
@@ -39,6 +40,7 @@ router.delete('/attendance/:id', requireAuth, deleteAttendanceLog);
 router.post('/attendance/clean-duplicates', requireAuth, cleanDuplicateAttendanceLogs);
 router.get('/queries/all', requireAuth, getAllQueries);
 router.put('/queries/:id/reply', requireAuth, replyQuery);
+router.delete('/queries/:id', requireAuth, deleteQuery);
 
 router.get('/:id', requireAuth, getEmployeeById);
 router.post('/', requireAuth, createEmployee);
