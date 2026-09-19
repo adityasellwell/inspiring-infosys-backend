@@ -1,6 +1,21 @@
-# Apache / Hostinger Reverse Proxy for Node.js Express Server
+# Apache / Hostinger Reverse Proxy & Universal CORS for Node.js Express Server
+
+<IfModule mod_headers.c>
+    # Always send CORS headers even on error status codes (500, 503, 404)
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+    Header always set Access-Control-Allow-Credentials "true"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Intercept OPTIONS preflight requests directly in Apache/LiteSpeed
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ - [R=200,L]
+
+    # Proxy all other requests to Node.js backend port 3001
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ http://127.0.0.1:3001/$1 [P,L]
