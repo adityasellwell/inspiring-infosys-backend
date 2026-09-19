@@ -29,25 +29,30 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ─────────────────────────────────────────────────────
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-  : [
-    'https://inspiringinfosys.com',
-    'https://www.inspiringinfosys.com',
-    'http://inspiringinfosys.com',
-    'http://www.inspiringinfosys.com',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ];
+const allowedOrigins = [
+  'https://inspiringinfosys.com',
+  'https://www.inspiringinfosys.com',
+  'http://inspiringinfosys.com',
+  'http://www.inspiringinfosys.com',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
 
-app.use(cors({
+if (process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL.split(',').forEach(url => {
+    const trimmed = url.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow server-to-server, mobile app, CLI or missing origin requests
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // Allow any subdomain of inspiringinfosys.com
     if (/^https?:\/\/(.+\.)?inspiringinfosys\.com$/i.test(origin)) {
       return callback(null, true);
     }
@@ -55,8 +60,30 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (/^https?:\/\/(.+\.)?inspiringinfosys\.com$/i.test(origin) || allowedOrigins.includes(origin) || allowedOrigins.includes('*'))) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
