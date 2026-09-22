@@ -470,3 +470,97 @@ export const autoLookupDomainExpiry = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Auto lookup failed: ' + error.message });
   }
 };
+
+// ── 7. AUTOMATED EXPIRY ALERT CRON JOB RUNNER ────────────────────────────
+export const runAutoExpiryAlertCron = async (req = null, res = null) => {
+  console.log('\n[Auto Email Cron] Starting daily client service expiry check...');
+  try {
+    let services = [];
+    if (prisma.clientService) {
+      services = await prisma.clientService.findMany({ orderBy: { expiryDate: 'asc' } });
+    } else {
+      await ensureTableExists();
+      const rawRows = await prisma.$queryRawUnsafe(`
+        SELECT id, client_name AS clientName, company_name AS companyName,
+               client_email AS clientEmail, client_phone AS clientPhone,
+               service_type AS serviceType, service_name AS serviceName,
+               provider, purchase_date AS purchaseDate, expiry_date AS expiryDate,
+               renewal_amount AS renewalAmount, auto_renew AS autoRenew,
+               status, last_alert_sent_at AS lastAlertSentAt, notes, created_at AS createdAt
+        FROM client_services ORDER BY expiry_date ASC
+      `);
+      services = rawRows || [];
+    }
+
+    const now = new Date();
+    let sentCount = 0;
+    let skippedCount = 0;
+    const dispatchedDetails = [];
+
+    for (const service of services) {
+      const daysLeft = calculateDaysRemaining(service.expiryDate);
+
+      // Trigger alerts if service is expiring within 30 days or is already expired
+      if (daysLeft !== null && daysLeft <= 30) {
+        // Prevent duplicate alerts sent on the exact same calendar day
+        const todayStr = now.toISOString().split('T')[0];
+        const lastSentStr = lastSent ? lastSent.toISOString().split('T')[0] : null;
+
+        if (lastSentStr !== todayStr) {
+          console.log(`[Auto Email Cron] Dispatching alert for '${service.serviceName}' (${service.clientEmail}) - Days left: ${daysLeft}`);
+          const emailRes = await sendServiceExpiryWarningEmail({
+            clientName: service.clientName,
+            clientEmail: service.clientEmail,
+            serviceName: service.serviceName,
+            serviceType: service.serviceType,
+            provider: service.provider,
+            expiryDate: service.expiryDate,
+            daysLeft,
+            renewalAmount: service.renewalAmount,
+            notes: service.notes
+          });
+
+          if (!emailRes || emailRes.success !== false) {
+            sentCount++;
+            dispatchedDetails.push({ service: service.serviceName, email: service.clientEmail, daysLeft });
+
+            // Update lastAlertSentAt timestamp
+            if (prisma.clientService) {
+              await prisma.clientService.update({
+                where: { id: service.id },
+                data: { lastAlertSentAt: now }
+              });
+            } else {
+              const nowStr = now.toISOString().slice(0, 19).replace('T', ' ');
+              await prisma.$executeRawUnsafe(`UPDATE client_services SET last_alert_sent_at = ? WHERE id = ?`, nowStr, service.id);
+            }
+          }
+        } else {
+          skippedCount++;
+        }
+      }
+    }
+
+    const summaryMsg = `Auto-alert scan complete. Dispatched ${sentCount} alert email(s) (${skippedCount} skipped as recently sent).`;
+    console.log(`[Auto Email Cron] ✅ ${summaryMsg}\n`);
+
+    if (res && typeof res.json === 'function') {
+      return res.json({
+        success: true,
+        message: summaryMsg,
+        sentCount,
+        skippedCount,
+        dispatched: dispatchedDetails
+      });
+    }
+
+    return { success: true, sentCount, skippedCount, summaryMsg };
+  } catch (err) {
+    console.error('[Auto Email Cron Error]', err);
+    if (res && typeof res.status === 'function') {
+      return res.status(500).json({ success: false, message: 'Auto alert cron error: ' + err.message });
+    }
+    return { success: false, error: err.message };
+  }
+};
+

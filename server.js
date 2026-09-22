@@ -152,8 +152,15 @@ app.listen(PORT, () => {
           console.log(`[DB Auto-Migrate] Migrated Employee #${emp.id} from '${emp.empId}' to '${cleanId}'`);
         }
       }
+
+      // Initialize Automated Daily Expiry Email Alert Scheduler (Runs daily & at startup)
+      const { runAutoExpiryAlertCron } = await import('./src/controllers/clientServiceController.js');
+      runAutoExpiryAlertCron();
+      setInterval(runAutoExpiryAlertCron, 24 * 60 * 60 * 1000);
+      console.log('[Auto Email Scheduler] Initialized 24-hour client service expiry check scheduler.');
     } catch (err) {
       console.warn('[DB Auto-Migrate Notice]', err.message);
     }
   });
 });
+

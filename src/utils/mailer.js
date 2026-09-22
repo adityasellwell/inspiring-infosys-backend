@@ -103,14 +103,17 @@ export const sendServiceExpiryWarningEmail = async ({
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'notifications@inspiringinfosys.com';
 
   const isExpired = daysLeft !== null && daysLeft <= 0;
+  const isOneDayLeft = daysLeft === 1;
+
   const daysText = isExpired
     ? 'EXPIRED'
-    : daysLeft === 1
-    ? '1 DAY REMAINING'
+    : isOneDayLeft
+    ? '1 DAY REMAINING (EXPIRING TOMORROW!)'
     : `${daysLeft} DAYS REMAINING`;
 
-  const statusBg = isExpired ? '#dc2626' : '#f97316';
-  const subject = `[URGENT] ${serviceType} (${serviceName}) Expiry Alert - ${daysText}`;
+  const statusBg = isExpired ? '#dc2626' : isOneDayLeft ? '#ef4444' : '#f97316';
+  const subjectPrefix = isExpired ? '🚨 [EXPIRED NOTICE]' : isOneDayLeft ? '🔴 [FINAL NOTICE - 1 DAY LEFT]' : '⚠️ [RENEWAL NOTICE]';
+  const subject = `${subjectPrefix} ${serviceType} (${serviceName}) Expiry Alert - ${daysText}`;
 
   const htmlBody = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; color: #1e293b;">
@@ -121,12 +124,14 @@ export const sendServiceExpiryWarningEmail = async ({
       
       <div style="padding: 24px;">
         <div style="background: ${statusBg}; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: 800; text-align: center; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px;">
-          ⚠️ ${isExpired ? 'SERVICE HAS EXPIRED' : `SERVICE EXPIRING SOON: ${daysText}`}
+          ${isExpired ? '🚨 SERVICE HAS EXPIRED' : isOneDayLeft ? '🔴 URGENT: SERVICE EXPIRING TOMORROW (1 DAY REMAINING)' : `⚠️ SERVICE EXPIRING SOON: ${daysText}`}
         </div>
         
         <p style="font-size: 15px; margin: 0 0 16px;">Dear <strong>${clientName}</strong>,</p>
         <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
-          This is an official notice regarding your <strong>${serviceType}</strong> for <strong>${serviceName}</strong>. Please review the expiration details below to ensure unbroken service continuity.
+          ${isOneDayLeft 
+            ? `This is a <strong>FINAL URGENT NOTICE</strong>: your <strong>${serviceType}</strong> for <strong>${serviceName}</strong> will <strong>expire tomorrow</strong>! Please renew immediately to avoid service disconnection.`
+            : `This is an official notice regarding your <strong>${serviceType}</strong> for <strong>${serviceName}</strong>. Please review the expiration details below to ensure unbroken service continuity.`}
         </p>
 
         <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
