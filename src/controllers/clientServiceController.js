@@ -504,7 +504,8 @@ export const runAutoExpiryAlertCron = async (req = null, res = null) => {
       if (daysLeft !== null && daysLeft <= 30) {
         // Prevent duplicate alerts sent on the exact same calendar day
         const todayStr = now.toISOString().split('T')[0];
-        const lastSentStr = lastSent ? lastSent.toISOString().split('T')[0] : null;
+        const lastSent = service.lastAlertSentAt ? new Date(service.lastAlertSentAt) : null;
+        const lastSentStr = (lastSent && !isNaN(lastSent.getTime())) ? lastSent.toISOString().split('T')[0] : null;
 
         if (lastSentStr !== todayStr) {
           console.log(`[Auto Email Cron] Dispatching alert for '${service.serviceName}' (${service.clientEmail}) - Days left: ${daysLeft}`);

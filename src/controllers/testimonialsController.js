@@ -27,7 +27,7 @@ export const getGoogleReviews = async (req, res) => {
 
 export const createTestimonial = async (req, res) => {
   try {
-    const { name, initials, timeAgo, rating, text, colorClass, sortOrder, isActive } = req.body;
+    const { name, initials, timeAgo, rating, text, colorClass, imgUrl, sortOrder, isActive } = req.body;
 
     if (!name || !text) {
       return res.status(400).json({ success: false, message: 'Name and Text are required' });
@@ -41,6 +41,7 @@ export const createTestimonial = async (req, res) => {
         rating: rating ? parseInt(rating) : 5,
         text,
         colorClass: colorClass ?? 'badge-blue',
+        imgUrl: imgUrl ?? '',
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
         isActive: isActive !== false,
       },
@@ -56,7 +57,7 @@ export const createTestimonial = async (req, res) => {
 export const updateTestimonial = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, initials, timeAgo, rating, text, colorClass, sortOrder, isActive } = req.body;
+    const { name, initials, timeAgo, rating, text, colorClass, imgUrl, sortOrder, isActive } = req.body;
 
     const existingTestimonial = await prisma.testimonial.findUnique({
       where: { id: parseInt(id) },
@@ -75,6 +76,7 @@ export const updateTestimonial = async (req, res) => {
         rating: rating !== undefined ? parseInt(rating) : existingTestimonial.rating,
         text: text ?? existingTestimonial.text,
         colorClass: colorClass ?? existingTestimonial.colorClass,
+        imgUrl: imgUrl !== undefined ? imgUrl : (existingTestimonial.imgUrl || ''),
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : existingTestimonial.sortOrder,
         isActive: isActive !== undefined ? !!isActive : existingTestimonial.isActive,
       },

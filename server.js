@@ -153,11 +153,29 @@ app.listen(PORT, () => {
         }
       }
 
-      // Initialize Automated Daily Expiry Email Alert Scheduler (Runs daily & at startup)
+      // Initialize Automated Daily Expiry Email Alert Scheduler (Runs daily at 9:00 AM)
       const { runAutoExpiryAlertCron } = await import('./src/controllers/clientServiceController.js');
-      runAutoExpiryAlertCron();
-      setInterval(runAutoExpiryAlertCron, 24 * 60 * 60 * 1000);
-      console.log('[Auto Email Scheduler] Initialized 24-hour client service expiry check scheduler.');
+
+      const scheduleDailyCronAtTime = (hour, minute, task) => {
+        const now = new Date();
+        const nextRun = new Date();
+        nextRun.setHours(hour, minute, 0, 0);
+
+        if (now.getTime() >= nextRun.getTime()) {
+          // If 9:00 AM has already passed today, set for 9:00 AM tomorrow
+          nextRun.setDate(nextRun.getDate() + 1);
+        }
+
+        const initialDelay = nextRun.getTime() - now.getTime();
+        console.log(`[Auto Email Scheduler] Next automated check scheduled for: ${nextRun.toLocaleString()}`);
+
+        setTimeout(() => {
+          task();
+          setInterval(task, 24 * 60 * 60 * 1000);
+        }, initialDelay);
+      };
+
+      scheduleDailyCronAtTime(9, 0, runAutoExpiryAlertCron);
     } catch (err) {
       console.warn('[DB Auto-Migrate Notice]', err.message);
     }
