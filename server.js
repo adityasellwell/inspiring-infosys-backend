@@ -103,12 +103,24 @@ app.get('/api/health', (_req, res) => {
 app.get('/api/sync-db', async (_req, res) => {
   try {
     await ensureDatabaseSynced();
-    const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true, name: true, email: true } });
+    const allEmployees = await prisma.employee.findMany();
+    for (const emp of allEmployees) {
+      const cleanId = normalizeEmpId(emp.empId, emp.id);
+      const updates = {};
+      if (emp.empId !== cleanId) updates.empId = cleanId;
+      if (emp.personalEmail && emp.personalEmail.trim() && emp.email !== emp.personalEmail.trim().toLowerCase()) {
+        updates.email = emp.personalEmail.trim().toLowerCase();
+      }
+      if (Object.keys(updates).length > 0) {
+        await prisma.employee.update({ where: { id: emp.id }, data: updates });
+      }
+    }
+    const syncedEmployees = await prisma.employee.findMany({ select: { id: true, empId: true, name: true, email: true, personalEmail: true } });
     return res.json({
       success: true,
       message: 'Prisma Hostinger Database auto-synced successfully!',
-      employeeCount: allEmployees.length,
-      employees: allEmployees
+      employeeCount: syncedEmployees.length,
+      employees: syncedEmployees
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -141,15 +153,17 @@ app.listen(PORT, () => {
   setImmediate(async () => {
     try {
       await ensureDatabaseSynced();
-      const allEmployees = await prisma.employee.findMany({ select: { id: true, empId: true } });
+      const allEmployees = await prisma.employee.findMany();
       for (const emp of allEmployees) {
         const cleanId = normalizeEmpId(emp.empId, emp.id);
-        if (emp.empId !== cleanId) {
-          await prisma.employee.update({
-            where: { id: emp.id },
-            data: { empId: cleanId }
-          });
-          console.log(`[DB Auto-Migrate] Migrated Employee #${emp.id} from '${emp.empId}' to '${cleanId}'`);
+        const updates = {};
+        if (emp.empId !== cleanId) updates.empId = cleanId;
+        if (emp.personalEmail && emp.personalEmail.trim() && emp.email !== emp.personalEmail.trim().toLowerCase()) {
+          updates.email = emp.personalEmail.trim().toLowerCase();
+        }
+        if (Object.keys(updates).length > 0) {
+          await prisma.employee.update({ where: { id: emp.id }, data: updates });
+          console.log(`[DB Auto-Migrate] Updated Employee #${emp.id}:`, updates);
         }
       }
 
