@@ -16,6 +16,7 @@ import {
   issueSalarySlip,
   getAllLeaves,
   updateLeaveStatus,
+  deleteLeave,
   getAllAttendance,
   deleteAttendanceLog,
   cleanDuplicateAttendanceLogs,
@@ -35,6 +36,7 @@ router.put('/requests/:id/status', requireAuth, updateRequestStatus);
 router.post('/salary-slips', requireAuth, issueSalarySlip);
 router.get('/leaves/all', requireAuth, getAllLeaves);
 router.put('/leaves/:id/status', requireAuth, updateLeaveStatus);
+router.delete('/leaves/:id', requireAuth, deleteLeave);
 router.get('/attendance/all', requireAuth, getAllAttendance);
 router.delete('/attendance/:id', requireAuth, deleteAttendanceLog);
 router.post('/attendance/clean-duplicates', requireAuth, cleanDuplicateAttendanceLogs);

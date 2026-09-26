@@ -45,6 +45,8 @@ export const login = async (req, res) => {
           { email: cleanInput },
           { personalEmail: cleanEmail },
           { personalEmail: cleanInput },
+          { companyEmail: cleanEmail },
+          { companyEmail: cleanInput },
           { phone: cleanInput },
           { empId: cleanInput },
           { empId: cleanInput.toUpperCase() },

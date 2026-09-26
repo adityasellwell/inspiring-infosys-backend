@@ -262,6 +262,7 @@ export const createEmployee = async (req, res) => {
         lastName: lastName || '',
         email: cleanEmail,
         personalEmail: personalEmail || '',
+        companyEmail: req.body.companyEmail || '',
         password: passwordHash,
         phone: normalizePhone(phone),
         altPhone: normalizePhone(altPhone),
@@ -334,7 +335,7 @@ export const updateEmployee = async (req, res) => {
     }
 
     const {
-      empId, name, firstName, middleName, lastName, email, personalEmail, phone, altPhone,
+      empId, name, firstName, middleName, lastName, email, personalEmail, companyEmail, phone, altPhone,
       dob, gender, address, currentAddress, permanentAddress, city, state, country, pincode,
       emergencyContactName, emergencyRelationship, emergencyPhone, emergencyAltPhone,
       department, designation, reportingManager, joinDate, confirmationDate, employmentType,
@@ -356,6 +357,7 @@ export const updateEmployee = async (req, res) => {
         lastName: lastName !== undefined ? lastName : existing.lastName,
         email: (email && email.trim()) ? email.trim().toLowerCase() : ((personalEmail && personalEmail.trim()) ? personalEmail.trim().toLowerCase() : existing.email),
         personalEmail: personalEmail !== undefined ? (personalEmail ? personalEmail.trim().toLowerCase() : '') : (email ? email.trim().toLowerCase() : existing.personalEmail),
+        companyEmail: companyEmail !== undefined ? (companyEmail ? companyEmail.trim().toLowerCase() : '') : existing.companyEmail,
         phone: phone ? normalizePhone(phone) : existing.phone,
         altPhone: altPhone !== undefined ? normalizePhone(altPhone) : existing.altPhone,
         dob: dob ? new Date(dob) : existing.dob,
@@ -748,6 +750,24 @@ export const updateLeaveStatus = async (req, res) => {
   } catch (error) {
     console.error('[PUT /api/employees/leaves/:id/status]', error);
     return res.json({ success: true, data: { id: parseInt(req.params.id, 10), status: req.body.status }, message: `Leave status updated to ${req.body.status}` });
+  }
+};
+
+export const deleteLeave = async (req, res) => {
+  try {
+    const leaveId = parseInt(req.params.id, 10);
+    if (isNaN(leaveId)) {
+      return res.status(400).json({ success: false, message: 'Invalid leave ID' });
+    }
+    
+    await prisma.leaveRequest.delete({
+      where: { id: leaveId }
+    });
+    
+    return res.json({ success: true, message: 'Leave request deleted successfully' });
+  } catch (error) {
+    console.error('[DELETE /api/employees/leaves/:id]', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete leave request' });
   }
 };
 

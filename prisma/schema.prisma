@@ -141,6 +141,7 @@ model Employee {
   lastName            String   @default("") @map("last_name")
   email               String
   personalEmail       String   @default("") @map("personal_email")
+  companyEmail        String   @default("") @map("company_email")
   password            String   @default("") // bcrypt hashed password for employee dashboard login
   phone               String   @default("")
   altPhone            String   @default("") @map("alt_phone")
