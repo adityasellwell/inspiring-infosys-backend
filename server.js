@@ -167,29 +167,44 @@ app.listen(PORT, () => {
         }
       }
 
-      // Initialize Automated Daily Expiry Email Alert Scheduler (Runs daily at 9:00 AM)
+      // Initialize Automated Daily Expiry Email Alert Scheduler
       const { runAutoExpiryAlertCron } = await import('./src/controllers/clientServiceController.js');
 
-      const scheduleDailyCronAtTime = (hour, minute, task) => {
-        const now = new Date();
-        const nextRun = new Date();
-        nextRun.setHours(hour, minute, 0, 0);
+      let lastCronRunDate = null;
 
-        if (now.getTime() >= nextRun.getTime()) {
-          // If 9:00 AM has already passed today, set for 9:00 AM tomorrow
-          nextRun.setDate(nextRun.getDate() + 1);
-        }
-
-        const initialDelay = nextRun.getTime() - now.getTime();
-        console.log(`[Auto Email Scheduler] Next automated check scheduled for: ${nextRun.toLocaleString()}`);
-
-        setTimeout(() => {
-          task();
-          setInterval(task, 24 * 60 * 60 * 1000);
-        }, initialDelay);
+      const toLocalDateStr = (d = new Date()) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       };
 
-      scheduleDailyCronAtTime(9, 0, runAutoExpiryAlertCron);
+      const checkAndRunDailyExpiryCron = async (reason = 'scheduled') => {
+        const todayStr = toLocalDateStr();
+        if (reason === 'scheduled' && lastCronRunDate === todayStr) {
+          return; // Already completed for today's calendar date
+        }
+
+        console.log(`[Auto Email Scheduler] 🚀 Triggering expiry alerts scan (Reason: ${reason}, Date: ${todayStr})...`);
+        try {
+          const result = await runAutoExpiryAlertCron();
+          lastCronRunDate = todayStr;
+          console.log(`[Auto Email Scheduler] Scan completed successfully for ${todayStr}.`, result?.summaryMsg || '');
+        } catch (err) {
+          console.error('[Auto Email Scheduler] Error during automated expiry scan:', err);
+        }
+      };
+
+      // 1. Run 5 seconds after server startup to catch any missed emails for today
+      setTimeout(() => {
+        console.log('[Auto Email Scheduler] Initializing startup check for client service expiry alerts...');
+        checkAndRunDailyExpiryCron('server_startup');
+      }, 5000);
+
+      // 2. Periodic hourly check to automatically run when a new calendar day arrives
+      setInterval(() => {
+        checkAndRunDailyExpiryCron('hourly_check');
+      }, 60 * 60 * 1000); // Check every 1 hour
     } catch (err) {
       console.warn('[DB Auto-Migrate Notice]', err.message);
     }

@@ -250,7 +250,7 @@ export const updateClientService = async (req, res) => {
           purchaseDate: purchaseDate ? new Date(purchaseDate) : existing.purchaseDate,
           expiryDate: expiryDate ? new Date(expiryDate) : existing.expiryDate,
           renewalAmount: amountVal,
-          autoRenew: Boolean(autoRenew),
+          autoRenew: autoRenew !== undefined ? Boolean(autoRenew) : Boolean(existing.autoRenew),
           status: status !== undefined ? status : existing.status,
           notes: notes !== undefined ? notes.trim() : existing.notes
         }
@@ -497,44 +497,62 @@ export const runAutoExpiryAlertCron = async (req = null, res = null) => {
     let skippedCount = 0;
     const dispatchedDetails = [];
 
+    const toLocalDateStr = (d) => {
+      if (!d) return null;
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return null;
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    };
+
+    const todayStr = toLocalDateStr(now);
+
     for (const service of services) {
       const daysLeft = calculateDaysRemaining(service.expiryDate);
 
       // Trigger alerts if service is expiring within 30 days or is already expired
       if (daysLeft !== null && daysLeft <= 30) {
+        if (!service.clientEmail || !service.clientEmail.trim()) {
+          console.warn(`[Auto Email Cron] Skipping '${service.serviceName}' - No valid client email provided.`);
+          continue;
+        }
+
         // Prevent duplicate alerts sent on the exact same calendar day
-        const todayStr = now.toISOString().split('T')[0];
-        const lastSent = service.lastAlertSentAt ? new Date(service.lastAlertSentAt) : null;
-        const lastSentStr = (lastSent && !isNaN(lastSent.getTime())) ? lastSent.toISOString().split('T')[0] : null;
+        const lastSentStr = toLocalDateStr(service.lastAlertSentAt);
 
         if (lastSentStr !== todayStr) {
           console.log(`[Auto Email Cron] Dispatching alert for '${service.serviceName}' (${service.clientEmail}) - Days left: ${daysLeft}`);
-          const emailRes = await sendServiceExpiryWarningEmail({
-            clientName: service.clientName,
-            clientEmail: service.clientEmail,
-            serviceName: service.serviceName,
-            serviceType: service.serviceType,
-            provider: service.provider,
-            expiryDate: service.expiryDate,
-            daysLeft,
-            renewalAmount: service.renewalAmount,
-            notes: service.notes
-          });
+          try {
+            const emailRes = await sendServiceExpiryWarningEmail({
+              clientName: service.clientName,
+              clientEmail: service.clientEmail,
+              serviceName: service.serviceName,
+              serviceType: service.serviceType,
+              provider: service.provider,
+              expiryDate: service.expiryDate,
+              daysLeft,
+              renewalAmount: service.renewalAmount,
+              notes: service.notes
+            });
 
-          if (!emailRes || emailRes.success !== false) {
-            sentCount++;
-            dispatchedDetails.push({ service: service.serviceName, email: service.clientEmail, daysLeft });
+            if (!emailRes || emailRes.success !== false) {
+              sentCount++;
+              dispatchedDetails.push({ service: service.serviceName, email: service.clientEmail, daysLeft });
 
-            // Update lastAlertSentAt timestamp
-            if (prisma.clientService) {
-              await prisma.clientService.update({
-                where: { id: service.id },
-                data: { lastAlertSentAt: now }
-              });
+              // Update lastAlertSentAt timestamp
+              if (prisma.clientService) {
+                await prisma.clientService.update({
+                  where: { id: service.id },
+                  data: { lastAlertSentAt: now }
+                });
+              } else {
+                const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                await prisma.$executeRawUnsafe(`UPDATE client_services SET last_alert_sent_at = ? WHERE id = ?`, nowStr, service.id);
+              }
             } else {
-              const nowStr = now.toISOString().slice(0, 19).replace('T', ' ');
-              await prisma.$executeRawUnsafe(`UPDATE client_services SET last_alert_sent_at = ? WHERE id = ?`, nowStr, service.id);
+              console.warn(`[Auto Email Cron] Email returned error for '${service.serviceName}':`, emailRes?.message);
             }
+          } catch (itemErr) {
+            console.error(`[Auto Email Cron] Failed sending alert for '${service.serviceName}':`, itemErr.message);
           }
         } else {
           skippedCount++;

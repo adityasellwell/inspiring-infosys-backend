@@ -184,23 +184,38 @@ export const sendServiceExpiryWarningEmail = async ({
     transporter = initMailer();
     if (transporter) {
       const fromAddr = process.env.SMTP_FROM || process.env.SMTP_USER;
+      const formattedFrom = `"Inspiring Infosys" <${fromAddr}>`;
+      const timeNowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
+      // 1. Send to client with BCC to Admin (guarantees admin always receives exact copy in 1 SMTP transmission)
       const info1 = await transporter.sendMail({
-        from: fromAddr,
+        from: formattedFrom,
         to: clientEmail,
+        bcc: adminEmail,
+        replyTo: adminEmail,
         subject,
         html: htmlBody
       });
-      console.log(`✅ [Nodemailer] Client email sent to ${clientEmail}! Message ID: ${info1.messageId} | Response: ${info1.response}`);
+      console.log(`✅ [Nodemailer] Client email sent to ${clientEmail} (BCC to ${adminEmail})! Message ID: ${info1.messageId}`);
 
+      // 2. Also send dedicated Admin Alert with unique timestamp so Gmail NEVER threads/collapses it
       if (adminEmail && adminEmail.toLowerCase() !== clientEmail.toLowerCase()) {
-        const info2 = await transporter.sendMail({
-          from: fromAddr,
-          to: adminEmail,
-          subject: `[ADMIN ALERT] ${subject} (${clientName})`,
-          html: htmlBody
-        });
-        console.log(`✅ [Nodemailer] Admin email sent to ${adminEmail}! Message ID: ${info2.messageId} | Response: ${info2.response}`);
+        try {
+          const info2 = await transporter.sendMail({
+            from: `"Inspiring Infosys Admin Alert" <${fromAddr}>`,
+            to: adminEmail,
+            subject: `[ADMIN ALERT ${timeNowStr}] ${subject} (${clientName})`,
+            html: `
+              <div style="background: #f1f5f9; padding: 12px 16px; border-bottom: 2px solid #0284c7; font-family: sans-serif; font-size: 13px; color: #334155; margin-bottom: 15px;">
+                <strong>Admin Dispatch Notice:</strong> Renewal warning dispatched to client <strong>${clientName}</strong> (${clientEmail}) at ${timeNowStr}.
+              </div>
+              ${htmlBody}
+            `
+          });
+          console.log(`✅ [Nodemailer] Dedicated Admin alert sent to ${adminEmail}! Message ID: ${info2.messageId}`);
+        } catch (adminErr) {
+          console.warn(`⚠️ [Nodemailer] Dedicated admin alert error (BCC copy already sent):`, adminErr.message);
+        }
       }
       return { success: true, message: `Expiry notification email sent! (Message ID: ${info1.messageId})` };
     } else {
