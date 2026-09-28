@@ -12,6 +12,15 @@ const normalizePhone = (rawPhone) => {
   return digits;
 };
 
+const generateRandomPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let randStr = '';
+  for (let i = 0; i < 4; i++) {
+    randStr += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Inspire#${randStr}`;
+};
+
 export const normalizeEmpId = (empId, id) => {
   const raw = String(empId || id || '').trim();
   if (!raw) return 'INS001';
@@ -39,7 +48,7 @@ export const getDashboardStats = async (req, res) => {
     const approvedEmpCount = new Set(approvedLeaves.map(l => l.employeeId)).size;
     const statusOnLeaveCount = await prisma.employee.count({ where: { status: 'On Leave' } }).catch(() => 0);
     const onLeaveEmployees = Math.max(statusOnLeaveCount, approvedEmpCount);
-    
+
     const pendingLeaveReqs = await prisma.leaveRequest.count({ where: { status: 'Pending' } });
     const pendingEmpReqs = await prisma.employeeRequest.count({ where: { status: 'Pending' } });
     const pendingQueries = await prisma.employeeQuery.count({ where: { status: 'Pending' } });
@@ -116,15 +125,30 @@ export const getAllEmployees = async (req, res) => {
       }
     });
 
-    // Auto-heal and normalize empId (e.g., 'emp1', 'emp01' -> 'INS001')
+    // Auto-heal and normalize empId and legacy passwords
     for (const emp of employees) {
       const formatted = normalizeEmpId(emp.empId, emp.id);
+      let needsUpdate = false;
+      const updateData = {};
+
       if (emp.empId !== formatted) {
         emp.empId = formatted;
+        updateData.empId = formatted;
+        needsUpdate = true;
+      }
+
+      if (!emp.password || emp.password.startsWith('$2')) {
+        const cleanPass = generateRandomPassword();
+        emp.password = cleanPass;
+        updateData.password = cleanPass;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
         prisma.employee.update({
           where: { id: emp.id },
-          data: { empId: formatted }
-        }).catch(err => console.warn('[Auto-heal empId]', err.message));
+          data: updateData
+        }).catch(err => console.warn('[Auto-heal employee]', err.message));
       }
     }
 
@@ -246,8 +270,7 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: `Email '${cleanEmail}' is already registered.` });
     }
 
-    const plainPassword = password || 'Inspire#2026';
-    const passwordHash = await bcrypt.hash(plainPassword, 10);
+    const plainPassword = password || generateRandomPassword();
 
     const parsedJoinDate = joinDate ? new Date(joinDate) : new Date();
     const parsedDob = dob ? new Date(dob) : null;
@@ -263,7 +286,7 @@ export const createEmployee = async (req, res) => {
         email: cleanEmail,
         personalEmail: personalEmail || '',
         companyEmail: req.body.companyEmail || '',
-        password: passwordHash,
+        password: plainPassword,
         phone: normalizePhone(phone),
         altPhone: normalizePhone(altPhone),
         dob: parsedDob,
@@ -316,9 +339,9 @@ export const createEmployee = async (req, res) => {
         entityId: String(newEmployee.id),
         newValue: `Created employee ${newEmployee.name} (${newEmployee.empId})`
       }
-    })).catch(() => {});
+    })).catch(() => { });
 
-    return res.json({ success: true, data: newEmployee, message: 'Employee added successfully!' });
+    return res.json({ success: true, data: { ...newEmployee, generatedPassword: plainPassword }, message: 'Employee added successfully!' });
   } catch (error) {
     console.error('[POST /api/employees]', error);
     return res.status(500).json({ success: false, message: 'Server error creating employee: ' + (error.message || '') });
@@ -446,12 +469,12 @@ export const deleteEmployee = async (req, res) => {
 
       if (permanent) {
         // Clean up child tables to prevent foreign key constraint failures
-        await prisma.attendance.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-        await prisma.leaveRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-        await prisma.salarySlip.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-        await prisma.employeeDocument.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-        await prisma.hRLetter.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
-        await prisma.employeeRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => {});
+        await prisma.attendance.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
+        await prisma.leaveRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
+        await prisma.salarySlip.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
+        await prisma.employeeDocument.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
+        await prisma.hRLetter.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
+        await prisma.employeeRequest.deleteMany({ where: { employeeId: existing.id } }).catch(() => { });
 
         await prisma.employee.delete({ where: { id: existing.id } });
         return res.json({ success: true, message: 'Employee record permanently deleted' });
@@ -636,8 +659,8 @@ export const updateRequestStatus = async (req, res) => {
 
     if (status === 'Approved' && reqItem.requestType === 'Profile Change' && reqItem.newValue) {
       const fieldToUpdate = reqItem.title.toLowerCase().includes('phone') ? 'phone' :
-                            reqItem.title.toLowerCase().includes('address') ? 'address' :
-                            reqItem.title.toLowerCase().includes('email') ? 'personalEmail' : null;
+        reqItem.title.toLowerCase().includes('address') ? 'address' :
+          reqItem.title.toLowerCase().includes('email') ? 'personalEmail' : null;
 
       if (fieldToUpdate) {
         await prisma.employee.update({
@@ -759,11 +782,11 @@ export const deleteLeave = async (req, res) => {
     if (isNaN(leaveId)) {
       return res.status(400).json({ success: false, message: 'Invalid leave ID' });
     }
-    
+
     await prisma.leaveRequest.delete({
       where: { id: leaveId }
     });
-    
+
     return res.json({ success: true, message: 'Leave request deleted successfully' });
   } catch (error) {
     console.error('[DELETE /api/employees/leaves/:id]', error);
@@ -888,7 +911,7 @@ export const deleteAttendanceLog = async (req, res) => {
     if (!isNaN(attId)) {
       await prisma.attendance.deleteMany({
         where: { id: attId }
-      }).catch(() => {});
+      }).catch(() => { });
     }
     return res.json({ success: true, message: "Attendance record deleted successfully!" });
   } catch (error) {
@@ -914,7 +937,7 @@ export const cleanDuplicateAttendanceLogs = async (req, res) => {
     for (const log of allLogs) {
       const dateKey = log.date ? new Date(log.date).toISOString().split('T')[0] : '';
       const empKey = `${log.employeeId}_${dateKey}`;
-      
+
       if (seenMap.has(empKey)) {
         toDeleteIds.push(log.id);
       } else {
@@ -945,7 +968,7 @@ export const resetEmployeePassword = async (req, res) => {
     const rawId = req.params.id;
     const numId = parseInt(rawId, 10);
     const { password } = req.body;
-    const newPassword = password || 'Inspire#2026';
+    const newPassword = password || generateRandomPassword();
 
     const employee = await prisma.employee.findFirst({
       where: {
@@ -961,10 +984,9 @@ export const resetEmployeePassword = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee record not found' });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
     const updated = await prisma.employee.update({
       where: { id: employee.id },
-      data: { password: hashedPassword }
+      data: { password: newPassword }
     });
 
     return res.json({

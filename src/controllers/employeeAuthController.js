@@ -213,7 +213,8 @@ export const updateProfile = async (req, res) => {
   try {
     const {
       photoUrl, aadharUrl, panUrl,
-      phone, altPhone, personalEmail,
+      firstName, middleName, lastName, dob, gender,
+      phone, altPhone, personalEmail, companyEmail,
       address, currentAddress, permanentAddress, city, state, country, pincode,
       emergencyContactName, emergencyRelationship, emergencyPhone, emergencyAltPhone,
       bankName, accountNumber, ifsc, panNumber, uanNumber, taxInfo
@@ -226,9 +227,17 @@ export const updateProfile = async (req, res) => {
           photoUrl: photoUrl !== undefined ? photoUrl : undefined,
           aadharUrl: aadharUrl !== undefined ? aadharUrl : undefined,
           panUrl: panUrl !== undefined ? panUrl : undefined,
+          firstName: firstName !== undefined ? firstName.trim() : undefined,
+          middleName: middleName !== undefined ? middleName.trim() : undefined,
+          lastName: lastName !== undefined ? lastName.trim() : undefined,
+          name: (firstName || lastName) ? `${firstName || ''} ${middleName || ''} ${lastName || ''}`.replace(/\s+/g, ' ').trim() : undefined,
+          dob: dob ? new Date(dob) : undefined,
+          gender: gender !== undefined ? gender : undefined,
           phone: phone !== undefined ? phone.trim() : undefined,
           altPhone: altPhone !== undefined ? altPhone.trim() : undefined,
           personalEmail: personalEmail !== undefined ? personalEmail.trim() : undefined,
+          companyEmail: companyEmail !== undefined ? companyEmail.trim() : undefined,
+          email: (companyEmail && companyEmail.trim()) ? companyEmail.trim().toLowerCase() : undefined,
           address: address !== undefined ? address.trim() : undefined,
           currentAddress: currentAddress !== undefined ? currentAddress.trim() : undefined,
           permanentAddress: permanentAddress !== undefined ? permanentAddress.trim() : undefined,
