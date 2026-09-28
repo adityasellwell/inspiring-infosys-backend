@@ -6,7 +6,8 @@ let transporter;
 const initMailer = () => {
   dotenv.config(); // Reload .env dynamically on each request
 
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const rawHost = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+  const host = rawHost.replace(/\.\.+/g, '.');
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
