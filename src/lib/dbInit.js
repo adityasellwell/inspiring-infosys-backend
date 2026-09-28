@@ -84,6 +84,7 @@ export async function ensureDatabaseSynced() {
         last_name VARCHAR(191) NOT NULL DEFAULT '',
         email VARCHAR(191) NOT NULL,
         personal_email VARCHAR(191) NOT NULL DEFAULT '',
+        company_email VARCHAR(191) NOT NULL DEFAULT '',
         password VARCHAR(191) NOT NULL DEFAULT '',
         phone VARCHAR(191) NOT NULL DEFAULT '',
         alt_phone VARCHAR(191) NOT NULL DEFAULT '',
@@ -285,6 +286,11 @@ export async function ensureDatabaseSynced() {
         created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `).catch(err => console.warn('[DB Init DailyWorkReports Table Warning]', err.message));
+
+    // Auto-add missing columns to existing MySQL tables
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE employees ADD COLUMN company_email VARCHAR(191) NOT NULL DEFAULT '';
+    `).catch(() => {});
 
     // 5. Ensure real initial employees exist ONLY if employee database is empty
     const empCount = await prisma.employee.count().catch(() => 0);
