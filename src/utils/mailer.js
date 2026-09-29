@@ -188,18 +188,17 @@ export const sendServiceExpiryWarningEmail = async ({
       const formattedFrom = `"Inspiring Infosys" <${fromAddr}>`;
       const timeNowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
-      // 1. Send to client with BCC to Admin (guarantees admin always receives exact copy in 1 SMTP transmission)
+      // 1. Send to client email (replyTo set to Admin)
       const info1 = await transporter.sendMail({
         from: formattedFrom,
         to: clientEmail,
-        bcc: adminEmail,
         replyTo: adminEmail,
         subject,
         html: htmlBody
       });
-      console.log(`✅ [Nodemailer] Client email sent to ${clientEmail} (BCC to ${adminEmail})! Message ID: ${info1.messageId}`);
+      console.log(`✅ [Nodemailer] Client email sent to ${clientEmail}! Message ID: ${info1.messageId}`);
 
-      // 2. Also send dedicated Admin Alert with unique timestamp so Gmail NEVER threads/collapses it
+      // 2. Also send dedicated Admin Alert if admin email is different from client email
       if (adminEmail && adminEmail.toLowerCase() !== clientEmail.toLowerCase()) {
         try {
           const info2 = await transporter.sendMail({
@@ -215,7 +214,7 @@ export const sendServiceExpiryWarningEmail = async ({
           });
           console.log(`✅ [Nodemailer] Dedicated Admin alert sent to ${adminEmail}! Message ID: ${info2.messageId}`);
         } catch (adminErr) {
-          console.warn(`⚠️ [Nodemailer] Dedicated admin alert error (BCC copy already sent):`, adminErr.message);
+          console.warn(`⚠️ [Nodemailer] Dedicated admin alert error:`, adminErr.message);
         }
       }
       return { success: true, message: `Expiry notification email sent! (Message ID: ${info1.messageId})` };

@@ -506,11 +506,13 @@ export const runAutoExpiryAlertCron = async (req = null, res = null) => {
 
     const todayStr = toLocalDateStr(now);
 
+    // Trigger alerts ONLY on key milestone days (30, 15, 7, 3, 1, 0 days, and 3 days post-expiry)
+    const milestoneDays = [30, 15, 7, 3, 1, 0, -3];
+
     for (const service of services) {
       const daysLeft = calculateDaysRemaining(service.expiryDate);
 
-      // Trigger alerts if service is expiring within 30 days or is already expired
-      if (daysLeft !== null && daysLeft <= 30) {
+      if (daysLeft !== null && milestoneDays.includes(daysLeft)) {
         if (!service.clientEmail || !service.clientEmail.trim()) {
           console.warn(`[Auto Email Cron] Skipping '${service.serviceName}' - No valid client email provided.`);
           continue;
