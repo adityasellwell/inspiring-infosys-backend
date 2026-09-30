@@ -115,7 +115,7 @@ async function main() {
         {
           title: 'SellWell',
           category: 'E-Commerce',
-          imgUrl: '/img/portsellwellimage.png',
+          imgUrl: '/img/portsellwellimage.webp',
           link: 'https://sellwellone.com/',
           description: 'Centralized e-commerce automation dashboard to manage inventory, orders, and performance across multiple marketplace seller accounts.',
           sortOrder: 1,
@@ -124,7 +124,7 @@ async function main() {
         {
           title: 'Spartan Nutrition',
           category: 'Websites',
-          imgUrl: '/img/web-spartan.png',
+          imgUrl: '/img/web-spartan.webp',
           link: 'https://spartannutrition.com/',
           description: 'Custom designed high-performance responsive website for sports nutrition products.',
           sortOrder: 2,
@@ -133,7 +133,7 @@ async function main() {
         {
           title: 'Tap2Cash',
           category: 'Software',
-          imgUrl: '/img/taptocash.png',
+          imgUrl: '/img/taptocash.webp',
           link: 'https://tap2cash.in/',
           description: 'Interactive POS and financial transaction software solution.',
           sortOrder: 3,
@@ -142,7 +142,7 @@ async function main() {
         {
           title: 'Lactra B2B',
           category: 'E-Commerce',
-          imgUrl: '/img/web-lactra.png',
+          imgUrl: '/img/web-lactra.webp',
           link: 'https://www.lactra.in/',
           description: 'Wholesale B2B ordering portal and e-commerce listing management solution.',
           sortOrder: 4,
@@ -151,7 +151,7 @@ async function main() {
         {
           title: 'Ayaan Toys',
           category: 'E-Commerce',
-          imgUrl: '/img/Web-ayantoys.png',
+          imgUrl: '/img/Web-ayantoys.webp',
           link: 'https://ayaantoys.in',
           description: 'Product catalog setup, inventory tracking and seller account automation.',
           sortOrder: 5,
@@ -160,7 +160,7 @@ async function main() {
         {
           title: 'Clasi Air',
           category: 'Websites',
-          imgUrl: '/img/Web-clasair.png',
+          imgUrl: '/img/Web-clasair.webp',
           link: 'https://clasiair.com',
           description: 'Brand website optimized for page speed, search visibility, and conversion.',
           sortOrder: 6,
@@ -169,7 +169,7 @@ async function main() {
         {
           title: 'Lycot Swimwear',
           category: 'E-Commerce',
-          imgUrl: '/img/Web-lycot.png',
+          imgUrl: '/img/Web-lycot.webp',
           link: 'https://www.lycot.com/password',
           description: 'Marketplace account setup, listings optimization, and active ad campaign management.',
           sortOrder: 7,
